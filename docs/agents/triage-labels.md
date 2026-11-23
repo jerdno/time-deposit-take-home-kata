@@ -16,5 +16,3 @@ When a skill mentions a role (e.g. "apply the AFK-ready triage label"), use the 
 
 - **`needs-info`**: leave the issue labelled `needs-triage` and post the questions as a comment (the triage skill's needs-info template). It stays in the triage queue and is re-evaluated on the next pass.
 - **`wontfix`**: post the explanation with `gh issue comment`, then `gh issue close <n> --reason "not planned"`. Don't add a label. Rejected enhancements are still recorded in `.out-of-scope/` as the triage skill describes.
-
-Edit the "Label in our tracker" column to match whatever vocabulary you actually use.
