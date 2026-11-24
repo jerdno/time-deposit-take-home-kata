@@ -16,7 +16,7 @@ class GetTimeDepositsTest extends ApiIntegrationTest {
     void defaultPageListsTimeDepositsWithoutWithdrawalsAsEmptyList() {
         int id = insertTimeDeposit("basic", "1000.00", 31);
 
-        assertThat(mvc.get().uri("/time-deposits"))
+        assertThat(mvc.get().uri("/v1/time-deposits"))
                 .hasStatus(HttpStatus.OK)
                 .hasContentTypeCompatibleWith(MediaType.APPLICATION_JSON)
                 .bodyJson()
@@ -39,7 +39,7 @@ class GetTimeDepositsTest extends ApiIntegrationTest {
             insertTimeDeposit("basic", "100.00", 10);
         }
 
-        assertThat(mvc.get().uri("/time-deposits?page=1&size=2"))
+        assertThat(mvc.get().uri("/v1/time-deposits?page=1&size=2"))
                 .hasStatus(HttpStatus.OK)
                 .bodyJson()
                 .isLenientlyEqualTo("""
@@ -59,7 +59,7 @@ class GetTimeDepositsTest extends ApiIntegrationTest {
         insertTimeDeposit(10, "basic", "100.00", 31);
         insertTimeDeposit(20, "student", "200.00", 365);
 
-        assertThat(mvc.get().uri("/time-deposits"))
+        assertThat(mvc.get().uri("/v1/time-deposits"))
                 .hasStatus(HttpStatus.OK)
                 .bodyJson()
                 .extractingPath("$.items[*].id")
@@ -72,7 +72,7 @@ class GetTimeDepositsTest extends ApiIntegrationTest {
     void pageAfterTheLastOneIsEmpty(int page) {
         insertTimeDeposit("basic", "100.00", 10);
 
-        assertThat(mvc.get().uri("/time-deposits?page=" + page))
+        assertThat(mvc.get().uri("/v1/time-deposits?page=" + page))
                 .hasStatus(HttpStatus.OK)
                 .bodyJson()
                 .isLenientlyEqualTo("""
@@ -89,7 +89,7 @@ class GetTimeDepositsTest extends ApiIntegrationTest {
         int only = insertWithdrawal(withOneWithdrawal, "50.50", LocalDate.of(2026, 3, 1));
         int second = insertWithdrawal(withWithdrawals, "25.00", LocalDate.of(2026, 2, 15));
 
-        assertThat(mvc.get().uri("/time-deposits"))
+        assertThat(mvc.get().uri("/v1/time-deposits"))
                 .hasStatus(HttpStatus.OK)
                 .bodyJson()
                 .isLenientlyEqualTo(
@@ -120,7 +120,7 @@ class GetTimeDepositsTest extends ApiIntegrationTest {
         insertWithdrawal(id, "0.10", LocalDate.of(2026, 1, 15));
         insertTimeDeposit("basic", "100.00", 31);
 
-        assertThat(mvc.get().uri("/time-deposits"))
+        assertThat(mvc.get().uri("/v1/time-deposits"))
                 .hasStatus(HttpStatus.OK)
                 .body()
                 .asString()
@@ -132,7 +132,7 @@ class GetTimeDepositsTest extends ApiIntegrationTest {
     @ParameterizedTest
     @ValueSource(strings = {"size=101", "size=0", "page=-1", "page=abc", "size=abc"})
     void invalidPageOrSizeIsRejectedWithProblemDetails(String query) {
-        assertThat(mvc.get().uri("/time-deposits?" + query))
+        assertThat(mvc.get().uri("/v1/time-deposits?" + query))
                 .hasStatus(HttpStatus.BAD_REQUEST)
                 .hasContentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON)
                 .bodyJson()

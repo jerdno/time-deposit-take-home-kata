@@ -8,7 +8,7 @@ info:
 tags:
   - name: Time Deposits
 paths:
-  /time-deposits:
+  /v1/time-deposits:
     get:
       tags: [Time Deposits]
       operationId: getTimeDeposits

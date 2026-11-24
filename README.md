@@ -7,7 +7,7 @@
 - Plan Type matching is case-sensitive today, so `"Basic"` earns no interest, the same as an unknown Plan Type such as `"gold"`. Both are pinned as "no interest, Balance unchanged" rather than rejected. (ticket 3)
 - `TimeDepositCalculator`'s no-arg constructor was removed; it now takes a `PlanTypeResolver`. The README protects only `TimeDeposit` and the `updateBalance` signature, and the only caller in this repo was the test. (ticket 4)
 - A missing (null) Plan Type is bad data like any unknown value: it is logged at `ERROR` and earns no interest. The original calculator threw a `NullPointerException` for it once Days passed 30. (ticket 4)
-- The README asks for "a list" of Time Deposits; `GET /time-deposits` returns an envelope `{ items, page, size, totalItems, totalPages }` because of pagination. Each item still matches the README schema. (ticket 5)
+- The README asks for "a list" of Time Deposits; `GET /v1/time-deposits` returns an envelope `{ items, page, size, totalItems, totalPages }` because of pagination. Each item still matches the README schema. (ticket 5)
 - `days` is stored as-is; the application never advances it. (ticket 5)
 - `created_at` is when the row was inserted, not when the Time Deposit was opened. (ticket 5)
 - Tables and columns use PostgreSQL's snake_case (`time_deposits.plan_type`, `withdrawals.time_deposit_id`) for the README's `timeDeposits.planType` and `withdrawals.timeDepositId`. The API keeps the README's camelCase names. (ticket 5)

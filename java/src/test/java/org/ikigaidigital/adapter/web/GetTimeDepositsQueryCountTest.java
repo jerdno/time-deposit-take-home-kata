@@ -31,7 +31,7 @@ class GetTimeDepositsQueryCountTest extends ApiIntegrationTest {
                 entityManagerFactory.unwrap(SessionFactory.class).getStatistics();
         statistics.clear();
 
-        assertThat(mvc.get().uri("/time-deposits?size=100"))
+        assertThat(mvc.get().uri("/v1/time-deposits?size=100"))
                 .hasStatus(HttpStatus.OK)
                 .bodyJson()
                 .extractingPath("$.items.length()")
