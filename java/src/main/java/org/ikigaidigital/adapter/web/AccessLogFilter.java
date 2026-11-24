@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
+import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -15,6 +16,13 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+/**
+ * Gives every API request a request id and an access log, so endpoints don't log their own start and end.
+ *
+ * <p>The request id comes from the {@code X-Request-Id} header or is a generated UUID. It is echoed in the response
+ * header and is in the MDC as {@code requestId} while the request runs, so every log line of the request carries it
+ * (see {@code logging.pattern.correlation}). Request and response bodies are never logged.
+ */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
 class AccessLogFilter extends OncePerRequestFilter {
@@ -22,10 +30,17 @@ class AccessLogFilter extends OncePerRequestFilter {
     static final String REQUEST_ID_HEADER = "X-Request-Id";
     static final String REQUEST_ID_MDC_KEY = "requestId";
 
-    private static final Logger log = LoggerFactory.getLogger(AccessLogFilter.class);
+    // Assumption (ticket 6): the incoming id is client input that lands in every log line and in a response header.
+    // Only up to 128 characters of letters, digits and . _ : + / = - are reused (enough for UUIDs and the usual
+    // trace ids); anything else, such as a line break that would forge a log line, gets a generated id instead.
+    private static final Pattern SAFE_REQUEST_ID = Pattern.compile("[A-Za-z0-9._:+/=-]{1,128}");
 
-    // Swagger UI (springdoc's default paths) and the contract it shows, served as a static file.
+    // Assumption (ticket 6): Swagger UI (springdoc's default paths), springdoc's api-docs and the contract that Swagger
+    // UI shows (/openapi.yaml) are skipped entirely: no access log lines and no request id. Every other request is
+    // logged, including one to an unknown path.
     private static final List<String> SWAGGER_PATH_PREFIXES = List.of("/swagger-ui", "/v3/api-docs", "/openapi.yaml");
+
+    private static final Logger log = LoggerFactory.getLogger(AccessLogFilter.class);
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
@@ -36,19 +51,19 @@ class AccessLogFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
-        String incoming = request.getHeader(REQUEST_ID_HEADER);
-        String requestId = incoming != null ? incoming : UUID.randomUUID().toString();
+        String requestId = requestId(request);
         response.setHeader(REQUEST_ID_HEADER, requestId);
         MDC.put(REQUEST_ID_MDC_KEY, requestId);
         long start = System.nanoTime();
-        String query = request.getQueryString();
-        log.info("Started {} {}{}", request.getMethod(), request.getRequestURI(), query == null ? "" : "?" + query);
+        // Assumption (ticket 6): an exception that escapes the chain has set no status; the servlet container answers
+        // it with a 500, so that is the status the end line reports.
         int status = HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
         try {
+            String query = request.getQueryString();
+            log.info("Started {} {}{}", request.getMethod(), request.getRequestURI(), query == null ? "" : "?" + query);
             chain.doFilter(request, response);
             status = response.getStatus();
         } finally {
-            // An exception that escapes the chain has no status yet; the servlet container answers it with a 500.
             long durationMs = (System.nanoTime() - start) / 1_000_000;
             log.info(
                     "Finished {} {} status={} durationMs={}",
@@ -58,5 +73,13 @@ class AccessLogFilter extends OncePerRequestFilter {
                     durationMs);
             MDC.remove(REQUEST_ID_MDC_KEY);
         }
+    }
+
+    private static String requestId(HttpServletRequest request) {
+        String incoming = request.getHeader(REQUEST_ID_HEADER);
+        if (incoming != null && SAFE_REQUEST_ID.matcher(incoming).matches()) {
+            return incoming;
+        }
+        return UUID.randomUUID().toString();
     }
 }
