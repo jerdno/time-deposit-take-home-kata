@@ -122,11 +122,11 @@ class BalanceUpdateTest extends ApiIntegrationTest {
                 .containsExactly(
                         tuple(
                                 Level.DEBUG,
-                                "Time Deposit " + basic + ": Plan Type basic, Days 31, interest 1.0, Balance 1201.0"),
+                                "Time Deposit " + basic + ": Plan Type basic, Days 31, interest 1.00, Balance 1201.00"),
                         tuple(
                                 Level.DEBUG,
                                 "Time Deposit " + student
-                                        + ": Plan Type student, Days 30, interest 0.0, Balance 1000.0"),
+                                        + ": Plan Type student, Days 30, interest 0.00, Balance 1000.00"),
                         tuple(Level.INFO, "Balance Update finished, 2 Time Deposits updated"));
     }
 
