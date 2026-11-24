@@ -94,6 +94,9 @@ class TimeDepositPersistenceAdapter implements LoadTimeDepositPagePort, LoadAllT
         timeDeposits.flush();
     }
 
+    // Assumption (ticket 7): the domain's Balance is a Double (TimeDeposit must not change), which holds 15
+    // significant digits exactly. Balances below 10^13 (with their two decimals) keep every cent through a Balance
+    // Update; larger ones may lose cents.
     private static TimeDeposit toDomain(TimeDepositEntity timeDeposit) {
         return new TimeDeposit(
                 timeDeposit.getId(),
