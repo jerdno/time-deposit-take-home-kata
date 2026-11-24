@@ -22,6 +22,8 @@
     </properties>
 
     <dependencies>
+        <!-- Assumption (ticket 2): "the application boots and stays up" needs an embedded web server,
+             so the Spring MVC starter is added before any endpoint exists. -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webmvc</artifactId>
