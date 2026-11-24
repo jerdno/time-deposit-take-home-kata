@@ -20,7 +20,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
@@ -121,7 +120,7 @@ class IdempotentBalanceUpdateTest extends PostgresIntegrationTest {
         int id = insertTimeDeposit("basic", "1200.00", 31);
         failingUpdates.failWhen("true");
 
-        assertThat(postBalanceUpdate(KEY)).hasFailed().failure().cause().isInstanceOf(DataAccessException.class);
+        assertThat(postBalanceUpdate(KEY)).hasStatus(HttpStatus.INTERNAL_SERVER_ERROR);
         assertThat(balanceOf(id)).isEqualByComparingTo("1200.00");
 
         failingUpdates.remove();
@@ -153,12 +152,8 @@ class IdempotentBalanceUpdateTest extends PostgresIntegrationTest {
         List<MvcTestResult> results = runTwoCallsThatOverlap(KEY, KEY, Map.of(UPDATE, 1, INSERT_KEY, 1));
 
         assertThat(results)
-                .filteredOn(result -> result.getUnresolvedException() != null)
-                .hasSize(1);
-        assertThat(results)
-                .filteredOn(result -> result.getUnresolvedException() == null)
-                .singleElement()
-                .satisfies(result -> assertThat(result).hasStatus(HttpStatus.NO_CONTENT));
+                .extracting(result -> result.getResponse().getStatus())
+                .containsExactlyInAnyOrder(HttpStatus.INTERNAL_SERVER_ERROR.value(), HttpStatus.NO_CONTENT.value());
         assertThat(balanceOf(id)).isEqualByComparingTo("1201.00");
         // The waiting call stored the key.
         assertThat(postBalanceUpdate(KEY)).hasStatus(HttpStatus.NO_CONTENT);
