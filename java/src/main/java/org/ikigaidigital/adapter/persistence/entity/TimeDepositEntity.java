@@ -60,6 +60,10 @@ public class TimeDepositEntity {
         return balance;
     }
 
+    public long getVersion() {
+        return version;
+    }
+
     public void changeBalance(BigDecimal balance) {
         this.balance = balance;
     }

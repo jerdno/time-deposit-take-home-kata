@@ -1,8 +1,8 @@
 package org.ikigaidigital.application;
 
 import java.util.List;
-import org.ikigaidigital.TimeDeposit;
 import org.ikigaidigital.TimeDepositCalculator;
+import org.ikigaidigital.application.model.VersionedTimeDeposit;
 import org.ikigaidigital.application.port.in.ApplyBalanceUpdateUseCase;
 import org.ikigaidigital.application.port.in.exception.ConcurrentBalanceUpdateException;
 import org.ikigaidigital.application.port.out.LoadAllTimeDepositsPort;
@@ -37,8 +37,9 @@ class BalanceUpdateService implements ApplyBalanceUpdateUseCase {
     @Override
     @Transactional
     public void applyBalanceUpdate() {
-        List<TimeDeposit> timeDeposits = loadAllTimeDepositsPort.loadAllTimeDeposits();
-        timeDepositCalculator.updateBalance(timeDeposits);
+        List<VersionedTimeDeposit> timeDeposits = loadAllTimeDepositsPort.loadAllTimeDeposits();
+        timeDepositCalculator.updateBalance(
+                timeDeposits.stream().map(VersionedTimeDeposit::timeDeposit).toList());
         try {
             saveBalancesPort.saveBalances(timeDeposits);
         } catch (OptimisticLockingFailureException e) {

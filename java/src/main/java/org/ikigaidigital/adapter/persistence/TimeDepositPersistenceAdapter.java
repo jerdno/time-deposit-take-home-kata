@@ -1,8 +1,10 @@
 package org.ikigaidigital.adapter.persistence;
 
+import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -17,13 +19,17 @@ import org.ikigaidigital.adapter.persistence.repository.WithdrawalJpaRepository;
 import org.ikigaidigital.application.model.PageQuery;
 import org.ikigaidigital.application.model.TimeDepositPage;
 import org.ikigaidigital.application.model.TimeDepositView;
+import org.ikigaidigital.application.model.VersionedTimeDeposit;
 import org.ikigaidigital.application.model.WithdrawalView;
 import org.ikigaidigital.application.port.out.LoadAllTimeDepositsPort;
 import org.ikigaidigital.application.port.out.LoadTimeDepositPagePort;
 import org.ikigaidigital.application.port.out.SaveBalancesPort;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 @Component
 class TimeDepositPersistenceAdapter implements LoadTimeDepositPagePort, LoadAllTimeDepositsPort, SaveBalancesPort {
@@ -81,28 +87,40 @@ class TimeDepositPersistenceAdapter implements LoadTimeDepositPagePort, LoadAllT
     }
 
     /**
-     * The loaded entities stay in the persistence context until the transaction ends, together with the {@code
-     * version} each was read at. {@link #saveBalances} relies on that for its optimistic locking.
+     * Each Time Deposit carries the {@code version} it was read at; {@link #saveBalances} checks it. The load needs no
+     * transaction of the caller's: {@code findAll} runs in Spring Data's own short read-only one, and the entities are
+     * detached once it ends.
      */
     @Override
-    public List<TimeDeposit> loadAllTimeDeposits() {
+    public List<VersionedTimeDeposit> loadAllTimeDeposits() {
         return timeDeposits.findAll(Sort.by("id")).stream()
-                .map(TimeDepositPersistenceAdapter::toDomain)
+                .map(timeDeposit -> new VersionedTimeDeposit(toDomain(timeDeposit), timeDeposit.getVersion()))
                 .toList();
     }
 
     /**
-     * Each UPDATE carries {@code WHERE version = <version when loaded>}. If another transaction changed the row in
-     * between, no row matches and the flush throws an {@link org.springframework.dao.OptimisticLockingFailureException}.
+     * Finds the Time Deposits again in the caller's transaction and compares each one's {@code version} with the one
+     * it was loaded at: a difference means another transaction changed it in between, and nothing is saved. The check
+     * cannot cover a change that commits after the find, so each UPDATE also carries {@code WHERE version = <version
+     * found>} (JPA {@code @Version}); if no row matches, the flush throws an {@link
+     * org.springframework.dao.OptimisticLockingFailureException} too.
      */
     @Override
-    public void saveBalances(List<TimeDeposit> updatedTimeDeposits) {
-        for (TimeDeposit timeDeposit : updatedTimeDeposits) {
-            // Found in the persistence context, where loadAllTimeDeposits left it: no query.
-            timeDeposits
-                    .findById(timeDeposit.getId())
-                    .orElseThrow()
-                    .changeBalance(roundToCent(timeDeposit.getBalance()));
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void saveBalances(List<VersionedTimeDeposit> updatedTimeDeposits) {
+        Map<Integer, TimeDepositEntity> entitiesById = timeDeposits
+                .findAllById(updatedTimeDeposits.stream()
+                        .map(updated -> updated.timeDeposit().getId())
+                        .toList())
+                .stream()
+                .collect(toMap(TimeDepositEntity::getId, identity()));
+        for (VersionedTimeDeposit updated : updatedTimeDeposits) {
+            TimeDeposit timeDeposit = updated.timeDeposit();
+            TimeDepositEntity entity = entitiesById.get(timeDeposit.getId());
+            if (entity == null || entity.getVersion() != updated.version()) {
+                throw new ObjectOptimisticLockingFailureException(TimeDepositEntity.class, timeDeposit.getId());
+            }
+            entity.changeBalance(roundToCent(timeDeposit.getBalance()));
         }
         timeDeposits.flush();
     }
