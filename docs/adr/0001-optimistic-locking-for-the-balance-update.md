@@ -1,8 +1,8 @@
 # Optimistic locking for the Balance Update, with 409 for the loser
 
-Every call to `POST /time-deposits/balance-updates` adds one Monthly Interest to every Time Deposit, so two calls that overlap must not silently overwrite each other's Balances. The Balance Update runs in one transaction and saves each Time Deposit with its `version` check (JPA `@Version`). When two run at once, the first to save commits. The second finds a changed `version`, rolls back as a whole and returns `409 Conflict`. Each `204` therefore means exactly one month of interest was applied, and a `409` means this call applied nothing.
+Two overlapping calls to `POST /time-deposits/balance-updates` must not silently overwrite each other's Balances. The Balance Update runs in one transaction and saves each Time Deposit with a check on its `version` (JPA `@Version`), so when two overlap, the second to write finds a changed `version`, rolls back as a whole and returns `409 Conflict`. Each `204` therefore means exactly one month of interest was applied, and a `409` means that call applied nothing.
 
-## Considered options
+## Considered Options
 
 - **No guard.** Two overlapping calls both read the old Balance and both write their result: a lost update. The month of interest is applied once while both callers get success.
 - **Row locks** (`SELECT ... FOR UPDATE` on every Time Deposit). The second call waits, then applies another month on top of the first. Both return `204` and two months are applied. That is correct if the caller meant two calls, but a retry or a duplicate trigger silently doubles the interest. The lock also holds every Time Deposit for the whole Balance Update, blocking any other writer.
