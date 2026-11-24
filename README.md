@@ -1,3 +1,9 @@
+## Solution
+
+### Assumptions
+
+- "The application boots and stays up" needs an embedded web server, so the Spring MVC starter (Tomcat) is added before any endpoint exists. (ticket 2)
+
 # Time Deposit Refactoring Kata - Take-Home Assignment
 
 ## XA Bank Time Deposit
