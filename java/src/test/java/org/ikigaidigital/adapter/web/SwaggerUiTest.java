@@ -7,7 +7,7 @@ import java.util.Map;
 import org.ikigaidigital.support.PostgresIntegrationTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
-import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.test.web.servlet.assertj.MvcTestResult;
 import org.yaml.snakeyaml.Yaml;
 
 class SwaggerUiTest extends PostgresIntegrationTest {
@@ -32,13 +32,13 @@ class SwaggerUiTest extends PostgresIntegrationTest {
     }
 
     /**
-     * Swagger UI fills a parameter's field on "Try it out" from the parameter's {@code examples}, {@code example} or
-     * {@code default}, or its schema's {@code example} or {@code default}. A pre-filled key would make every POST sent
-     * from Swagger UI after the first a replay that adds no interest.
+     * Swagger UI fills a parameter's field on "Try it out" from the parameter's {@code examples}, {@code example},
+     * {@code default} or {@code content} example, or its schema's {@code example} or {@code default}. A pre-filled key
+     * would make every POST sent from Swagger UI after the first a replay that adds no interest.
      */
     @Test
     void swaggerUiLeavesTheIdempotencyKeyFieldEmpty() throws Exception {
-        Map<String, Object> idempotencyKey = balanceUpdateParameter(servedContract(), "Idempotency-Key");
+        Map<String, Object> idempotencyKey = idempotencyKeyParameter(servedContract());
 
         assertThat(idempotencyKey).containsEntry("required", false);
         assertThat(idempotencyKey).doesNotContainKeys("example", "examples", "default", "content");
@@ -46,19 +46,18 @@ class SwaggerUiTest extends PostgresIntegrationTest {
     }
 
     private Map<String, Object> servedContract() throws Exception {
-        MockHttpServletResponse response =
-                mvc.get().uri("/openapi.yaml").exchange().getResponse();
-        assertThat(response.getStatus()).isEqualTo(HttpStatus.OK.value());
-        return new Yaml().load(response.getContentAsString());
+        MvcTestResult result = mvc.get().uri("/openapi.yaml").exchange();
+        assertThat(result).hasStatus(HttpStatus.OK);
+        return new Yaml().load(result.getResponse().getContentAsString());
     }
 
     @SuppressWarnings("unchecked")
-    private static Map<String, Object> balanceUpdateParameter(Map<String, Object> contract, String name) {
+    private static Map<String, Object> idempotencyKeyParameter(Map<String, Object> contract) {
         Map<String, Object> balanceUpdates = asMap(asMap(contract.get("paths")).get("/time-deposits/balance-updates"));
         List<Map<String, Object>> parameters =
                 (List<Map<String, Object>>) asMap(balanceUpdates.get("post")).get("parameters");
         return parameters.stream()
-                .filter(parameter -> name.equals(parameter.get("name")))
+                .filter(parameter -> "Idempotency-Key".equals(parameter.get("name")))
                 .findFirst()
                 .orElseThrow();
     }

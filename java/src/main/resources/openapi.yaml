@@ -73,8 +73,8 @@ paths:
           schema:
             type: string
             pattern: '^([A-Za-z0-9._:+/=-]{1,255}|"[A-Za-z0-9._:+/=-]{1,255}")$'
-          # No example or default, here or on the schema: Swagger UI copies either into the field on Try it out, and a
-          # fixed key would make every POST from Swagger UI after the first a replay that adds no interest.
+          # No example or default, here or on the schema (ticket 11): Swagger UI copies either into the field on Try it
+          # out, and a fixed key would make every POST from Swagger UI after the first a replay that adds no interest.
       responses:
         '204':
           description: |
