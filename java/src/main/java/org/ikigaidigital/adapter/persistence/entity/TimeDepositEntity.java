@@ -1,4 +1,4 @@
-package org.ikigaidigital.adapter.persistence;
+package org.ikigaidigital.adapter.persistence.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -13,7 +13,7 @@ import java.time.Instant;
 
 @Entity
 @Table(name = "time_deposits")
-class TimeDepositEntity {
+public class TimeDepositEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -45,19 +45,19 @@ class TimeDepositEntity {
         updatedAt = Instant.now();
     }
 
-    Integer getId() {
+    public Integer getId() {
         return id;
     }
 
-    String getPlanType() {
+    public String getPlanType() {
         return planType;
     }
 
-    int getDays() {
+    public int getDays() {
         return days;
     }
 
-    BigDecimal getBalance() {
+    public BigDecimal getBalance() {
         return balance;
     }
 }

@@ -1,4 +1,4 @@
-package org.ikigaidigital.adapter.persistence;
+package org.ikigaidigital.adapter.persistence.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -12,7 +12,7 @@ import java.time.LocalDate;
 
 @Entity
 @Table(name = "withdrawals")
-class WithdrawalEntity {
+public class WithdrawalEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -35,19 +35,19 @@ class WithdrawalEntity {
 
     protected WithdrawalEntity() {}
 
-    Integer getId() {
+    public Integer getId() {
         return id;
     }
 
-    Integer getTimeDepositId() {
+    public Integer getTimeDepositId() {
         return timeDepositId;
     }
 
-    BigDecimal getAmount() {
+    public BigDecimal getAmount() {
         return amount;
     }
 
-    LocalDate getDate() {
+    public LocalDate getDate() {
         return date;
     }
 }

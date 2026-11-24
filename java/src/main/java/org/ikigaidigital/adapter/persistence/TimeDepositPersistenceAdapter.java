@@ -6,7 +6,11 @@ import static java.util.stream.Collectors.toList;
 
 import java.util.List;
 import java.util.Map;
-import org.ikigaidigital.adapter.persistence.TimeDepositJpaRepository.TimeDepositWithTotal;
+import org.ikigaidigital.adapter.persistence.entity.TimeDepositEntity;
+import org.ikigaidigital.adapter.persistence.entity.WithdrawalEntity;
+import org.ikigaidigital.adapter.persistence.repository.TimeDepositJpaRepository;
+import org.ikigaidigital.adapter.persistence.repository.TimeDepositJpaRepository.TimeDepositWithTotal;
+import org.ikigaidigital.adapter.persistence.repository.WithdrawalJpaRepository;
 import org.ikigaidigital.application.model.PageQuery;
 import org.ikigaidigital.application.model.TimeDepositPage;
 import org.ikigaidigital.application.model.TimeDepositView;
