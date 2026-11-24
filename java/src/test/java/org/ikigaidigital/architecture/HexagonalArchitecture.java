@@ -10,8 +10,7 @@ import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.sli
 import com.tngtech.archunit.lang.ArchRule;
 
 /**
- * The hexagonal boundaries as ArchUnit rules, built for a root package so that they can run against the real code
- * ({@code org.ikigaidigital}) and against test fixtures laid out the same way.
+ * The hexagonal boundaries as ArchUnit rules, built for a root package ({@code org.ikigaidigital}).
  *
  * <pre>
  * root                       domain: TimeDeposit, TimeDepositCalculator (classes in root itself, not its sub-packages)
