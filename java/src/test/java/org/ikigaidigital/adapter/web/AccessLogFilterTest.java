@@ -45,4 +45,14 @@ class AccessLogFilterTest extends PostgresIntegrationTest {
                         .contains("INFO")
                         .containsPattern("Finished GET /time-deposits status=200 durationMs=\\d+$"));
     }
+
+    @Test
+    void logsTheEndOfARejectedRequest(CapturedOutput output) {
+        assertThat(mvc.get().uri("/time-deposits?size=abc").header("X-Request-Id", "bad-size"))
+                .hasStatus(HttpStatus.BAD_REQUEST);
+
+        assertThat(output.getOut().lines().filter(line -> line.contains("[bad-size]")))
+                .anySatisfy(line ->
+                        assertThat(line).containsPattern("Finished GET /time-deposits status=400 durationMs=\\d+$"));
+    }
 }
