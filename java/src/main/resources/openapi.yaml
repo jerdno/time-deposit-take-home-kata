@@ -45,6 +45,18 @@ paths:
                 $ref: '#/components/schemas/TimeDepositPage'
         '400':
           $ref: '#/components/responses/BadRequest'
+  /time-deposits/balance-updates:
+    post:
+      tags: [Time Deposits]
+      operationId: applyBalanceUpdate
+      summary: Run a Balance Update
+      description: |
+        Adds one Monthly Interest to the Balance of every Time Deposit, all or nothing.
+        Every call adds another month of interest; calling it once a month is the caller's job.
+        Days is not changed.
+      responses:
+        '204':
+          description: The Balance Update was applied to every Time Deposit.
 components:
   responses:
     BadRequest:

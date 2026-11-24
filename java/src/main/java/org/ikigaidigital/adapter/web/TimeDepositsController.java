@@ -9,6 +9,7 @@ import org.ikigaidigital.application.model.PageQuery;
 import org.ikigaidigital.application.model.TimeDepositPage;
 import org.ikigaidigital.application.model.TimeDepositView;
 import org.ikigaidigital.application.model.WithdrawalView;
+import org.ikigaidigital.application.port.in.ApplyBalanceUpdateUseCase;
 import org.ikigaidigital.application.port.in.GetTimeDepositsUseCase;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
@@ -18,9 +19,11 @@ import org.springframework.web.bind.annotation.RestController;
 class TimeDepositsController implements TimeDepositsApi {
 
     private final GetTimeDepositsUseCase getTimeDeposits;
+    private final ApplyBalanceUpdateUseCase applyBalanceUpdate;
 
-    TimeDepositsController(GetTimeDepositsUseCase getTimeDeposits) {
+    TimeDepositsController(GetTimeDepositsUseCase getTimeDeposits, ApplyBalanceUpdateUseCase applyBalanceUpdate) {
         this.getTimeDeposits = getTimeDeposits;
+        this.applyBalanceUpdate = applyBalanceUpdate;
     }
 
     // Assumption (ticket 5): the README asks for "a list"; we return an envelope { items, page, size, totalItems,
@@ -34,6 +37,12 @@ class TimeDepositsController implements TimeDepositsApi {
                 result.size(),
                 result.totalItems(),
                 result.totalPages()));
+    }
+
+    @Override
+    public ResponseEntity<Void> applyBalanceUpdate() {
+        applyBalanceUpdate.applyBalanceUpdate();
+        return ResponseEntity.noContent().build();
     }
 
     private static TimeDepositDto toDto(TimeDepositView timeDeposit) {
