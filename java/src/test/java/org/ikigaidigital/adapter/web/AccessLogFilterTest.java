@@ -84,4 +84,26 @@ class AccessLogFilterTest extends PostgresIntegrationTest {
 
         assertThat(MDC.getCopyOfContextMap()).isNullOrEmpty();
     }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"", "forged\nFinished GET /time-deposits status=200 durationMs=1", "has space"})
+    void replacesAnUnsafeIncomingRequestIdWithAGeneratedOne(String incoming) {
+        MvcTestResult result =
+                mvc.get().uri("/time-deposits").header("X-Request-Id", incoming).exchange();
+
+        String requestId = result.getResponse().getHeader("X-Request-Id");
+        assertThat(UUID.fromString(requestId)).hasToString(requestId);
+    }
+
+    @Test
+    void replacesAnOverlongIncomingRequestId() {
+        String overlong = "a".repeat(129);
+
+        MvcTestResult result =
+                mvc.get().uri("/time-deposits").header("X-Request-Id", overlong).exchange();
+
+        assertThat(result.getResponse().getHeader("X-Request-Id")).isNotEqualTo(overlong);
+        assertThat(mvc.get().uri("/time-deposits").header("X-Request-Id", "a".repeat(128)))
+                .hasHeader("X-Request-Id", "a".repeat(128));
+    }
 }
