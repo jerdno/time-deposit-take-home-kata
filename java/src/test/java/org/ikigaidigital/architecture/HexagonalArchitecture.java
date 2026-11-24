@@ -1,5 +1,8 @@
 package org.ikigaidigital.architecture;
 
+import static com.tngtech.archunit.base.DescribedPredicate.not;
+import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAnyPackage;
+import static com.tngtech.archunit.core.domain.properties.HasName.Predicates.name;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices;
@@ -20,9 +23,8 @@ import com.tngtech.archunit.lang.ArchRule;
  */
 final class HexagonalArchitecture {
 
-    // Assumption (ticket 8): the @SpringBootApplication class sits in the root package, which is also the domain
-    // package. Moving it would change Spring's component scanning, so it stays and is treated as the composition root:
-    // exactly this one class is left out of the domain rules.
+    // Assumption (ticket 8): the @SpringBootApplication class is the composition root (see TimeDepositApplication). It
+    // is the one class in the domain package left out of the domain rule, and the domain may not depend on it.
     static final String COMPOSITION_ROOT = "TimeDepositApplication";
 
     private HexagonalArchitecture() {}
@@ -31,17 +33,21 @@ final class HexagonalArchitecture {
      * The domain depends only on the JDK, the SLF4J API and itself: no Spring, no Jakarta Persistence, no web types, no
      * application or adapter packages.
      */
+    // Assumption (ticket 8): the rule is an allow-list, stricter than the ticket's "no Spring, JPA, web types or
+    // adapters". It also keeps the domain off the application layer and off any other library; a new library in the
+    // domain is then a deliberate change to this rule.
     static ArchRule domainDependsOnlyOnTheJdkSlf4jApiAndItself(String root) {
         String plantype = root + ".plantype..";
+        String compositionRoot = root + "." + COMPOSITION_ROOT;
         return classes()
                 .that()
                 // A package without ".." matches that package only, so root's sub-packages are not part of this set.
                 .resideInAnyPackage(root, plantype)
                 .and()
-                .doNotHaveFullyQualifiedName(root + "." + COMPOSITION_ROOT)
+                .doNotHaveFullyQualifiedName(compositionRoot)
                 .should()
-                .onlyDependOnClassesThat()
-                .resideInAnyPackage(root, plantype, "java..", "org.slf4j..")
+                .onlyDependOnClassesThat(resideInAnyPackage(root, plantype, "java..", "org.slf4j..")
+                        .and(not(name(compositionRoot))))
                 .as("the domain depends only on the JDK, the SLF4J API and itself");
     }
 

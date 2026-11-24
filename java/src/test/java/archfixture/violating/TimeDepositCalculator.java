@@ -2,10 +2,14 @@ package archfixture.violating;
 
 import archfixture.violating.adapter.persistence.Repository;
 
-/** A top-level domain class that depends on an adapter. */
+/** A top-level domain class that depends on an adapter and on the composition root. */
 public class TimeDepositCalculator {
 
     public int count(Repository repository) {
         return repository.hashCode();
+    }
+
+    public int start(TimeDepositApplication application) {
+        return application.hashCode();
     }
 }

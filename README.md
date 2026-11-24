@@ -18,7 +18,8 @@ The code follows a hexagonal layout, and ArchUnit tests (`HexagonalArchitectureT
 - `planType` is stored and returned as a plain string: no CHECK constraint in the database and no enum in the contract. A Time Deposit with an unknown Plan Type is bad data the application must survive and still list, not reject. (ticket 5)
 - A page past the last one returns `200` with an empty `items` list, not an error. (ticket 5)
 - A Time Deposit's Withdrawals are listed by `id` ascending (the order they were recorded); the README does not specify an order. (ticket 5)
-- `TimeDepositApplication` (the `@SpringBootApplication` class) stays in `org.ikigaidigital`, which is also the domain package, because moving it would change Spring's component scanning. It is treated as the composition root: the only class in the domain package allowed to depend on Spring, and the one class the ArchUnit domain rule leaves out. (ticket 8)
+- `TimeDepositApplication` (the `@SpringBootApplication` class) stays in `org.ikigaidigital`, which is also the domain package, because moving it would change Spring's component scanning. It is treated as the composition root: the only class in the domain package allowed to depend on Spring, and the one class the ArchUnit domain rule leaves out. No domain class may depend on it. (ticket 8)
+- The ArchUnit domain rule is an allow-list (the JDK, the SLF4J API and the domain itself), stricter than the ticket's list of Spring, JPA, web types and adapters. It also keeps the domain off the application layer and off any other library, so adding a library to the domain means changing the rule on purpose. (ticket 8)
 
 # Time Deposit Refactoring Kata - Take-Home Assignment
 
