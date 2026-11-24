@@ -31,7 +31,6 @@ public class TimeDepositEntity {
     @Version
     private long version;
 
-    // Audit columns: filled by the database defaults, not exposed in the API.
     @Column(name = "created_at", insertable = false, updatable = false)
     private Instant createdAt;
 

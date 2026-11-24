@@ -29,7 +29,6 @@ public class WithdrawalEntity {
     @Column(nullable = false)
     private LocalDate date;
 
-    // Audit column: filled by the database default, not exposed in the API.
     @Column(name = "created_at", insertable = false, updatable = false)
     private Instant createdAt;
 
