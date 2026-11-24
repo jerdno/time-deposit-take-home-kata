@@ -7,11 +7,13 @@ import java.util.List;
 import org.ikigaidigital.TimeDeposit;
 import org.ikigaidigital.TimeDepositCalculator;
 import org.ikigaidigital.application.port.in.ApplyBalanceUpdateUseCase;
+import org.ikigaidigital.application.port.in.ConcurrentBalanceUpdateException;
 import org.ikigaidigital.application.port.out.LoadAllTimeDepositsPort;
 import org.ikigaidigital.application.port.out.SaveBalancesPort;
 import org.ikigaidigital.application.port.out.SaveBalancesPort.NewBalance;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -58,7 +60,13 @@ class BalanceUpdateService implements ApplyBalanceUpdateUseCase {
                     newBalance);
             newBalances.add(new NewBalance(timeDeposit.getId(), newBalance));
         }
-        saveBalancesPort.saveBalances(newBalances);
+        try {
+            saveBalancesPort.saveBalances(newBalances);
+        } catch (OptimisticLockingFailureException e) {
+            // Optimistic locking, not row locks (docs/adr/0001-optimistic-locking-for-the-balance-update.md): the loser
+            // rolls back and its caller learns so.
+            throw new ConcurrentBalanceUpdateException(e);
+        }
         // Assumption (ticket 7): N counts every Time Deposit the Balance Update went through, including those that
         // earned no interest (outside their Eligibility Window, or with an unknown Plan Type).
         log.info("Balance Update finished, {} Time Deposits updated", timeDeposits.size());
