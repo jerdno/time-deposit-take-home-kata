@@ -24,16 +24,26 @@ class IdempotentRequests {
     }
 
     /**
-     * @param idempotencyKey the header value, already checked against the contract's pattern
+     * @param idempotencyKey the header value, already checked against the contract's pattern: a bare key, or one in
+     *     double quotes
      */
     void run(@Nullable String idempotencyKey, Runnable work) {
         if (idempotencyKey == null) {
             work.run();
             return;
         }
-        if (runOnce.runOnce(idempotencyKey, work) == Outcome.SKIPPED) {
+        String key = unquote(idempotencyKey);
+        if (runOnce.runOnce(key, work) == Outcome.SKIPPED) {
             // The key matches the contract's pattern (letters, digits, ._:+/=-), so it cannot forge log lines.
-            log.info("Idempotency-Key {} was already used; the request was skipped", idempotencyKey);
+            log.info("Idempotency-Key {} was already used; the request was skipped", key);
         }
+    }
+
+    // Assumption (ticket 11): the IETF Idempotency-Key draft defines the header as a Structured Field string, sent in
+    // double quotes; most clients send the bare value. Both forms name the same key, stored without the quotes.
+    private static String unquote(String idempotencyKey) {
+        return idempotencyKey.startsWith("\"")
+                ? idempotencyKey.substring(1, idempotencyKey.length() - 1)
+                : idempotencyKey;
     }
 }

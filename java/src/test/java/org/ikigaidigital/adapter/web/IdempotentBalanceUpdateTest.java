@@ -22,9 +22,12 @@ import org.ikigaidigital.adapter.web.api.model.TimeDepositPageDto;
 import org.ikigaidigital.support.PostgresIntegrationTest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 
 class IdempotentBalanceUpdateTest extends PostgresIntegrationTest {
@@ -52,6 +55,39 @@ class IdempotentBalanceUpdateTest extends PostgresIntegrationTest {
 
         assertThat(postBalanceUpdate(KEY)).hasStatus(HttpStatus.NO_CONTENT);
         assertThat(postBalanceUpdate(KEY)).hasStatus(HttpStatus.NO_CONTENT);
+
+        assertThat(balanceOf(id)).isEqualByComparingTo("1201.00");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"", "a b", "key\u00e9", "\"unbalanced", "\"\""})
+    void aKeyOutsideTheAllowedFormatIsABadRequestAndAddsNoInterest(String idempotencyKey) {
+        int id = insertTimeDeposit("basic", "1200.00", 31);
+
+        assertThat(postBalanceUpdate(idempotencyKey))
+                .hasStatus(HttpStatus.BAD_REQUEST)
+                .hasContentType(MediaType.APPLICATION_PROBLEM_JSON);
+        assertThat(balanceOf(id)).isEqualByComparingTo("1200.00");
+    }
+
+    @Test
+    void aKeyOfUpTo255CharactersIsAccepted() {
+        int id = insertTimeDeposit("basic", "1200.00", 31);
+
+        assertThat(postBalanceUpdate("k".repeat(256))).hasStatus(HttpStatus.BAD_REQUEST);
+        assertThat(postBalanceUpdate("k".repeat(255))).hasStatus(HttpStatus.NO_CONTENT);
+        assertThat(postBalanceUpdate("\"" + "k".repeat(255) + "\"")).hasStatus(HttpStatus.NO_CONTENT);
+
+        assertThat(balanceOf(id)).isEqualByComparingTo("1201.00");
+    }
+
+    @Test
+    void aKeyInDoubleQuotesIsTheSameKeyAsTheBareOne() {
+        int id = insertTimeDeposit("basic", "1200.00", 31);
+
+        assertThat(postBalanceUpdate('"' + KEY + '"')).hasStatus(HttpStatus.NO_CONTENT);
+        assertThat(postBalanceUpdate(KEY)).hasStatus(HttpStatus.NO_CONTENT);
+        assertThat(postBalanceUpdate('"' + KEY + '"')).hasStatus(HttpStatus.NO_CONTENT);
 
         assertThat(balanceOf(id)).isEqualByComparingTo("1201.00");
     }
