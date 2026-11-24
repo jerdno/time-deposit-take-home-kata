@@ -100,6 +100,12 @@ class TimeDepositCalculatorTest {
             // 0.125 is exact in binary floating point, so the calculator really sees a half cent.
             assertThat(balanceAfterUpdate("basic", 150.00, 31)).isEqualTo(150.13);
         }
+
+        @Test
+        void roundsOnlyMonthlyInterestNotTheResultingBalance() {
+            // 1200.004 × 1% / 12 = 1.0000033... -> 1.00; the sub-cent part of the Balance is kept.
+            assertThat(balanceAfterUpdate("basic", 1200.004, 31)).isEqualTo(1201.004);
+        }
     }
 
     @Nested
