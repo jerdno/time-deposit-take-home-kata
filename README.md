@@ -26,7 +26,7 @@ This builds the application image, starts PostgreSQL, waits until it accepts con
 Open <http://localhost:8080/swagger-ui.html>. It shows the contract as written (`java/src/main/resources/openapi.yaml`, also served at <http://localhost:8080/openapi.yaml>) with its two operations. For each step, expand the operation, click **Try it out**, then **Execute**.
 
 1. **`GET /v1/time-deposits`** returns `200` and the first page of Time Deposits (default `size` 20), ordered by `id`: the ten seeded Time Deposits with their Withdrawals, and `totalItems: 10`.
-2. **`POST /v1/time-deposits/balance-updates`** returns `204` with no body. One Monthly Interest was added to the Balance of every Time Deposit. The interest is computed first, with no transaction open, and all the new Balances are then saved in one transaction. Leave the optional `Idempotency-Key` field empty for this walkthrough.
+2. **`POST /v1/time-deposits/balance-updates`**, with the optional `Idempotency-Key` field left empty, returns `204` with no body. One Monthly Interest was added to the Balance of every Time Deposit. The interest is computed first, with no transaction open, and all the new Balances are then saved in one transaction.
 3. **`GET /v1/time-deposits`** again. A Time Deposit inside its Plan Type's Eligibility Window grew by one Monthly Interest: the annual rate divided by twelve, applied to the Balance, rounded to the cent. Every other Balance is unchanged, and Days never changes.
 
 | id | Plan Type | Days | Balance before | Balance after | Why |
