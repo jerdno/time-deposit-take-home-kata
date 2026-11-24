@@ -21,7 +21,7 @@ class AccessLogFilterFailureTest {
 
     @Test
     void logsTheEndOfARequestWhoseHandlerThrows(CapturedOutput output) {
-        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/time-deposits");
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/v1/time-deposits");
 
         assertThatThrownBy(() -> new AccessLogFilter().doFilter(request, new MockHttpServletResponse(), (req, res) -> {
                     throw new IllegalStateException("database is down");
@@ -29,13 +29,13 @@ class AccessLogFilterFailureTest {
                 .isInstanceOf(IllegalStateException.class);
 
         // Matches the message only: without a Spring context, the log pattern is Logback's default one.
-        assertThat(output.getOut()).containsPattern("Finished GET /time-deposits status=500 durationMs=\\d+\\R");
+        assertThat(output.getOut()).containsPattern("Finished GET /v1/time-deposits status=500 durationMs=\\d+\\R");
         assertThat(MDC.getCopyOfContextMap()).isNullOrEmpty();
     }
 
     @Test
     void logsTheStatusAlreadySentWhenTheHandlerThrowsAfterCommittingTheResponse(CapturedOutput output) {
-        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/time-deposits");
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/v1/time-deposits");
 
         assertThatThrownBy(() -> new AccessLogFilter().doFilter(request, new MockHttpServletResponse(), (req, res) -> {
                     ((HttpServletResponse) res).setStatus(HttpServletResponse.SC_OK);
@@ -44,6 +44,6 @@ class AccessLogFilterFailureTest {
                 }))
                 .isInstanceOf(IllegalStateException.class);
 
-        assertThat(output.getOut()).containsPattern("Finished GET /time-deposits status=200 durationMs=\\d+\\R");
+        assertThat(output.getOut()).containsPattern("Finished GET /v1/time-deposits status=200 durationMs=\\d+\\R");
     }
 }
