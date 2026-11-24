@@ -8,7 +8,6 @@ import org.ikigaidigital.application.port.in.ApplyBalanceUpdateUseCase;
 import org.ikigaidigital.support.FailingTimeDepositUpdates;
 import org.ikigaidigital.support.PostgresIntegrationTest;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
@@ -18,16 +17,9 @@ class BalanceUpdateRollbackTest extends PostgresIntegrationTest {
     @Autowired
     ApplyBalanceUpdateUseCase balanceUpdate;
 
-    private FailingTimeDepositUpdates failingUpdates;
-
-    @BeforeEach
-    void prepareFailingUpdates() {
-        failingUpdates = new FailingTimeDepositUpdates(jdbc);
-    }
-
     @AfterEach
     void removeFailingUpdates() {
-        failingUpdates.remove();
+        FailingTimeDepositUpdates.remove(jdbc);
     }
 
     @Test
@@ -36,7 +28,7 @@ class BalanceUpdateRollbackTest extends PostgresIntegrationTest {
         insertTimeDeposit(2, "student", "1200.00", 31);
         insertTimeDeposit(3, "premium", "1200.00", 46);
         // The database rejects the UPDATE of the last Time Deposit, after the first two were already written.
-        failingUpdates.failWhen("OLD.id = 3");
+        FailingTimeDepositUpdates.failWhen(jdbc, "OLD.id = 3");
 
         assertThatThrownBy(balanceUpdate::applyBalanceUpdate).isInstanceOf(DataAccessException.class);
 

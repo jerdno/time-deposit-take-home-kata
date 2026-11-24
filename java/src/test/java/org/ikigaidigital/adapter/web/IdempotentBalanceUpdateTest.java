@@ -14,7 +14,6 @@ import org.ikigaidigital.support.FailingTimeDepositUpdates;
 import org.ikigaidigital.support.OverlappingCalls;
 import org.ikigaidigital.support.PostgresIntegrationTest;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -32,13 +31,6 @@ class IdempotentBalanceUpdateTest extends PostgresIntegrationTest {
 
     @Autowired
     DataSource dataSource;
-
-    private FailingTimeDepositUpdates failingUpdates;
-
-    @BeforeEach
-    void prepareFailingUpdates() {
-        failingUpdates = new FailingTimeDepositUpdates(jdbc);
-    }
 
     @Test
     void withoutAKeyEveryCallAddsInterest() {
@@ -118,12 +110,12 @@ class IdempotentBalanceUpdateTest extends PostgresIntegrationTest {
     @Test
     void aFailedCallWithAKeyStoresNoKeySoItsRetryAddsInterestOnce() {
         int id = insertTimeDeposit("basic", "1200.00", 31);
-        failingUpdates.failWhen("true");
+        FailingTimeDepositUpdates.failWhen(jdbc, "true");
 
         assertThat(postBalanceUpdate(KEY)).hasStatus(HttpStatus.INTERNAL_SERVER_ERROR);
         assertThat(balanceOf(id)).isEqualByComparingTo("1200.00");
 
-        failingUpdates.remove();
+        FailingTimeDepositUpdates.remove(jdbc);
         assertThat(postBalanceUpdate(KEY)).hasStatus(HttpStatus.NO_CONTENT);
         assertThat(postBalanceUpdate(KEY)).hasStatus(HttpStatus.NO_CONTENT);
 
@@ -147,7 +139,7 @@ class IdempotentBalanceUpdateTest extends PostgresIntegrationTest {
         int id = insertTimeDeposit("basic", "1200.00", 31);
         // Only the first UPDATE fails: a sequence is not transactional, so the failed call's rollback keeps it at 1.
         jdbc.sql("CREATE SEQUENCE fail_balance_update_once").update();
-        failingUpdates.failWhen("nextval('fail_balance_update_once') = 1");
+        FailingTimeDepositUpdates.failWhen(jdbc, "nextval('fail_balance_update_once') = 1");
 
         List<MvcTestResult> results = runTwoCallsThatOverlap(KEY, KEY, Map.of(UPDATE, 1, INSERT_KEY, 1));
 
@@ -186,7 +178,7 @@ class IdempotentBalanceUpdateTest extends PostgresIntegrationTest {
 
     @AfterEach
     void removeFailingUpdates() {
-        failingUpdates.remove();
+        FailingTimeDepositUpdates.remove(jdbc);
         jdbc.sql("DROP SEQUENCE IF EXISTS fail_balance_update_once").update();
     }
 

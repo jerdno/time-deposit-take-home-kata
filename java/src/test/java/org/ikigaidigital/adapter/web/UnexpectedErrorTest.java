@@ -21,12 +21,10 @@ class UnexpectedErrorTest extends PostgresIntegrationTest {
 
     private final Logger applicationLogger = (Logger) LoggerFactory.getLogger("org.ikigaidigital");
     private final ListAppender<ILoggingEvent> logged = new ListAppender<>();
-    private FailingTimeDepositUpdates failingUpdates;
 
     @BeforeEach
     void failEveryUpdateAndCaptureLogs() {
-        failingUpdates = new FailingTimeDepositUpdates(jdbc);
-        failingUpdates.failWhen("true");
+        FailingTimeDepositUpdates.failWhen(jdbc, "true");
         logged.start();
         applicationLogger.addAppender(logged);
     }
@@ -34,7 +32,7 @@ class UnexpectedErrorTest extends PostgresIntegrationTest {
     @AfterEach
     void cleanUp() {
         applicationLogger.detachAppender(logged);
-        failingUpdates.remove();
+        FailingTimeDepositUpdates.remove(jdbc);
     }
 
     @Test
