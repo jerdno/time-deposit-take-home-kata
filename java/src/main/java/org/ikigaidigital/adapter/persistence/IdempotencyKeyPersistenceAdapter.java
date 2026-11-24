@@ -1,5 +1,6 @@
 package org.ikigaidigital.adapter.persistence;
 
+import org.ikigaidigital.adapter.persistence.repository.IdempotencyKeyJpaRepository;
 import org.ikigaidigital.application.port.out.ClaimIdempotencyKeyPort;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;

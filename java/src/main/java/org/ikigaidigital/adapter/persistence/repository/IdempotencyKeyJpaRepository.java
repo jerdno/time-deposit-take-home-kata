@@ -1,11 +1,12 @@
-package org.ikigaidigital.adapter.persistence;
+package org.ikigaidigital.adapter.persistence.repository;
 
+import org.ikigaidigital.adapter.persistence.entity.IdempotencyKeyEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-interface IdempotencyKeyJpaRepository extends JpaRepository<IdempotencyKeyEntity, String> {
+public interface IdempotencyKeyJpaRepository extends JpaRepository<IdempotencyKeyEntity, String> {
 
     /**
      * Inserts the key unless it exists. {@code ON CONFLICT DO NOTHING} waits for a concurrent transaction that inserted

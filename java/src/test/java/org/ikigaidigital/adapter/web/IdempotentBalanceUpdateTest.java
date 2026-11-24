@@ -17,7 +17,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import javax.sql.DataSource;
-import org.ikigaidigital.support.PostgresIntegrationTest;
+import org.ikigaidigital.support.ApiIntegrationTest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -29,7 +29,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 
-class IdempotentBalanceUpdateTest extends PostgresIntegrationTest {
+class IdempotentBalanceUpdateTest extends ApiIntegrationTest {
 
     private static final String KEY = "8e03978e-40d5-43e8-bc93-6894a57f9324";
     private static final Duration TIMEOUT = Duration.ofSeconds(30);
@@ -254,12 +254,12 @@ class IdempotentBalanceUpdateTest extends PostgresIntegrationTest {
     }
 
     private MvcTestResult postBalanceUpdate() {
-        return mvc.post().uri("/time-deposits/balance-updates").exchange();
+        return mvc.post().uri("/v1/time-deposits/balance-updates").exchange();
     }
 
     private MvcTestResult postBalanceUpdate(String idempotencyKey) {
         return mvc.post()
-                .uri("/time-deposits/balance-updates")
+                .uri("/v1/time-deposits/balance-updates")
                 .header("Idempotency-Key", idempotencyKey)
                 .exchange();
     }

@@ -1,6 +1,6 @@
 # Idempotency key for the Balance Update, stored in the Balance Update's transaction
 
-A client that retries `POST /time-deposits/balance-updates` after a timeout cannot tell whether the first call applied a month of interest, so a blind retry may apply a second one. The POST takes an optional `Idempotency-Key` header: the first call with a key claims it in an `idempotency_keys` table and runs the Balance Update in the same transaction, and a later call with that key returns `204` without running it. Because the key commits or rolls back together with the Balances, a stored key always means a month of interest was applied, and a call that failed can be retried with the same key.
+A client that retries `POST /v1/time-deposits/balance-updates` after a timeout cannot tell whether the first call applied a month of interest, so a blind retry may apply a second one. The POST takes an optional `Idempotency-Key` header: the first call with a key claims it in an `idempotency_keys` table and runs the Balance Update in the same transaction, and a later call with that key returns `204` without running it. Because the key commits or rolls back together with the Balances, a stored key always means a month of interest was applied, and a call that failed can be retried with the same key.
 
 ## Considered Options
 

@@ -1,4 +1,4 @@
-package org.ikigaidigital.adapter.persistence;
+package org.ikigaidigital.adapter.persistence.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -9,7 +9,7 @@ import java.time.OffsetDateTime;
 /** A row of {@code idempotency_keys}. Rows are only inserted, with native SQL (see the repository). */
 @Entity
 @Table(name = "idempotency_keys")
-class IdempotencyKeyEntity {
+public class IdempotencyKeyEntity {
 
     @Id
     @Column(name = "key")
