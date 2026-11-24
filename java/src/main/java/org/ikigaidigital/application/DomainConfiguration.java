@@ -15,7 +15,7 @@ import org.springframework.context.annotation.Configuration;
  * Type is one more bean: the resolver picks up every {@link PlanType} bean.
  */
 @Configuration(proxyBeanMethods = false)
-class PlanTypeConfiguration {
+class DomainConfiguration {
 
     @Bean
     BasicPlan basicPlan() {
