@@ -1,6 +1,6 @@
 # Manual testing
 
-- **API**: `docker compose up --build -d` from the repo root serves http://localhost:8080 with the `local` profile (migrations plus seed data). Exercise it with `curl`; the README's "Trying the endpoints" section lists the seeded Time Deposits and the Balances expected after one Balance Update. `docker compose down -v` resets to the seed data.
+- **API**: `docker compose up --build -d` from the repo root serves http://localhost:8080 with the `local` profile (migrations plus seed data). Every API path is versioned under `/v1` (e.g. `/v1/time-deposits`). Exercise it with `curl`; the README's "Trying the endpoints" section lists the seeded Time Deposits and the Balances expected after one Balance Update. `docker compose down -v` resets to the seed data.
 - **Swagger UI**: http://localhost:8080/swagger-ui.html, driven with the session's browser tools.
 - **Auth**: not gated.
 - **Wiring**: PostgreSQL only, defined in `compose.yaml`; app datasource defaults in `java/src/main/resources/application-local.yaml`. No external providers. The database has no host port; reach it with `docker compose exec postgres psql -U time_deposits`.
