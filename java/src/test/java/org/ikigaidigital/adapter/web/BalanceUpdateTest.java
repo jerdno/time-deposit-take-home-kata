@@ -116,16 +116,17 @@ class BalanceUpdateTest extends ApiIntegrationTest {
         assertThat(postBalanceUpdate()).hasStatus(HttpStatus.NO_CONTENT);
 
         assertThat(logged.list)
-                .filteredOn(event -> event.getLoggerName().endsWith(".BalanceUpdateService"))
+                .filteredOn(event -> event.getLoggerName().endsWith(".TimeDepositCalculator")
+                        || event.getLoggerName().endsWith(".BalanceUpdateService"))
                 .extracting(ILoggingEvent::getLevel, ILoggingEvent::getFormattedMessage)
                 .containsExactly(
                         tuple(
                                 Level.DEBUG,
-                                "Time Deposit " + basic + ": Plan Type basic, Days 31, interest 1.00, Balance 1201.00"),
+                                "Time Deposit " + basic + ": Plan Type basic, Days 31, interest 1.0, Balance 1201.0"),
                         tuple(
                                 Level.DEBUG,
                                 "Time Deposit " + student
-                                        + ": Plan Type student, Days 30, interest 0.00, Balance 1000.00"),
+                                        + ": Plan Type student, Days 30, interest 0.0, Balance 1000.0"),
                         tuple(Level.INFO, "Balance Update finished, 2 Time Deposits updated"));
     }
 

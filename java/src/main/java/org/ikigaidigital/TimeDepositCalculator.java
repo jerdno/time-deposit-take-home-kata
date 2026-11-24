@@ -5,8 +5,12 @@ import java.math.RoundingMode;
 import java.util.List;
 import org.ikigaidigital.plantype.PlanType;
 import org.ikigaidigital.plantype.PlanTypeResolver;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TimeDepositCalculator {
+
+    private static final Logger log = LoggerFactory.getLogger(TimeDepositCalculator.class);
 
     private final PlanTypeResolver planTypeResolver;
 
@@ -16,13 +20,25 @@ public class TimeDepositCalculator {
         this.planTypeResolver = planTypeResolver;
     }
 
-    /** Balance Update: adds one Monthly Interest, rounded to the cent half-up, to each Time Deposit's Balance. */
+    /**
+     * Balance Update: adds one Monthly Interest, rounded to the cent half-up, to each Time Deposit's Balance. Logs
+     * the interest added and the new Balance of each Time Deposit at DEBUG.
+     */
     public void updateBalance(List<TimeDeposit> timeDeposits) {
         for (TimeDeposit timeDeposit : timeDeposits) {
             PlanType planType = planTypeResolver.resolve(timeDeposit);
             double monthlyInterest =
                     planType.isEligible(timeDeposit) ? planType.calculateMonthlyInterest(timeDeposit) : 0;
-            timeDeposit.setBalance(timeDeposit.getBalance() + roundToCent(monthlyInterest));
+            double interest = roundToCent(monthlyInterest);
+            timeDeposit.setBalance(timeDeposit.getBalance() + interest);
+            // Balances and interest are amounts of money: DEBUG only.
+            log.debug(
+                    "Time Deposit {}: Plan Type {}, Days {}, interest {}, Balance {}",
+                    timeDeposit.getId(),
+                    timeDeposit.getPlanType(),
+                    timeDeposit.getDays(),
+                    interest,
+                    timeDeposit.getBalance());
         }
     }
 
