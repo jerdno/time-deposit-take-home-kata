@@ -3,6 +3,8 @@
 ### Assumptions
 
 - "The application boots and stays up" needs an embedded web server, so the Spring MVC starter (Tomcat) is added before any endpoint exists. (ticket 2)
+- A negative Balance is pinned as the calculator handles it today: interest is negative and the Balance shrinks, rounding half-up (away from zero) on a half cent. (ticket 3)
+- Plan Type matching is case-sensitive today, so `"Basic"` earns no interest, the same as an unknown Plan Type such as `"gold"`. Both are pinned as "no interest, Balance unchanged" rather than rejected. (ticket 3)
 
 # Time Deposit Refactoring Kata - Take-Home Assignment
 
