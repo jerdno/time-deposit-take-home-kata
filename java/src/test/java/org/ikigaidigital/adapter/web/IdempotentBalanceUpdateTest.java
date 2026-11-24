@@ -1,7 +1,12 @@
 package org.ikigaidigital.adapter.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.Statement;
@@ -16,6 +21,7 @@ import javax.sql.DataSource;
 import org.ikigaidigital.support.PostgresIntegrationTest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
@@ -47,6 +53,27 @@ class IdempotentBalanceUpdateTest extends PostgresIntegrationTest {
         assertThat(postBalanceUpdate(KEY)).hasStatus(HttpStatus.NO_CONTENT);
 
         assertThat(balanceOf(id)).isEqualByComparingTo("1201.00");
+    }
+
+    @Test
+    void aSkippedReplayIsLoggedAtInfo() {
+        insertTimeDeposit("basic", "1200.00", 31);
+        Logger logger = (Logger) LoggerFactory.getLogger("org.ikigaidigital");
+        ListAppender<ILoggingEvent> logged = new ListAppender<>();
+        logged.start();
+        logger.addAppender(logged);
+        try {
+            postBalanceUpdate(KEY);
+            postBalanceUpdate(KEY);
+        } finally {
+            logger.detachAppender(logged);
+        }
+
+        assertThat(logged.list)
+                .filteredOn(event -> event.getFormattedMessage().contains("Idempotency-Key"))
+                .extracting(ILoggingEvent::getLevel, ILoggingEvent::getFormattedMessage)
+                .containsExactly(
+                        tuple(Level.INFO, "Idempotency-Key " + KEY + " was already used; the request was skipped"));
     }
 
     @Test
