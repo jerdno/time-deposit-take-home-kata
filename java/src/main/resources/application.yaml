@@ -1,0 +1,11 @@
+spring:
+  application:
+    name: time-deposit-kata
+  flyway:
+    # Schema only. The local profile adds the seed data location (see application-local.yaml).
+    locations: classpath:db/migration
+  jpa:
+    hibernate:
+      # Flyway owns the schema; Hibernate only checks that the entities match it.
+      ddl-auto: validate
+    open-in-view: false
