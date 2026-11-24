@@ -22,3 +22,7 @@ springdoc:
 server:
   mime-mappings:
     yaml: application/yaml
+logging:
+  pattern:
+    # Every log line carries the request id that AccessLogFilter puts in the MDC (empty brackets outside a request).
+    correlation: "[%X{requestId:-}] "
