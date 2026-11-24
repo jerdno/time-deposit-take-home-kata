@@ -1,5 +1,9 @@
 ## Solution
 
+### Package layout
+
+The code follows a hexagonal layout, and ArchUnit tests (`HexagonalArchitectureTest`) fail `./mvnw verify` when it is broken. The domain is `org.ikigaidigital` itself (`TimeDeposit`, `TimeDepositCalculator`, not its sub-packages) plus `org.ikigaidigital.plantype` (the Plan Types and `PlanTypeResolver`); it depends only on the JDK, the SLF4J API and itself. `org.ikigaidigital.application` holds the use cases, the in- and out-ports and the model they exchange (`application.model`), and may use Spring and the domain but no adapter. `org.ikigaidigital.adapter.web` (generated API interfaces, controller, the Problem Details handler in `web.exception`, web infrastructure) and `org.ikigaidigital.adapter.persistence` (out-port implementations, with the JPA entities in `persistence.entity` and the Spring Data repositories in `persistence.repository`) depend on the application layer and never on each other.
+
 ### Assumptions
 
 - "The application boots and stays up" needs an embedded web server, so the Spring MVC starter (Tomcat) is added before any endpoint exists. (ticket 2)
@@ -14,6 +18,8 @@
 - `planType` is stored and returned as a plain string: no CHECK constraint in the database and no enum in the contract. A Time Deposit with an unknown Plan Type is bad data the application must survive and still list, not reject. (ticket 5)
 - A page past the last one returns `200` with an empty `items` list, not an error. (ticket 5)
 - A Time Deposit's Withdrawals are listed by `id` ascending (the order they were recorded); the README does not specify an order. (ticket 5)
+- `TimeDepositApplication` (the `@SpringBootApplication` class) stays in `org.ikigaidigital`, which is also the domain package, because moving it would change Spring's component scanning. It is treated as the composition root: the only class in the domain package allowed to depend on Spring, and the one class the ArchUnit domain rule leaves out. No domain class may depend on it. (ticket 8)
+- The ArchUnit domain rule is an allow-list (the JDK, the SLF4J API and the domain itself), stricter than the ticket's list of Spring, JPA, web types and adapters. It also keeps the domain off the application layer and off any other library, so adding a library to the domain means changing the rule on purpose. (ticket 8)
 
 # Time Deposit Refactoring Kata - Take-Home Assignment
 
