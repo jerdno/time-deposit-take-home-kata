@@ -1,12 +1,20 @@
 package org.ikigaidigital.adapter.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import java.math.BigDecimal;
 import java.util.Map;
 import javax.sql.DataSource;
 import org.ikigaidigital.support.PostgresIntegrationTest;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.HttpStatus;
@@ -16,6 +24,25 @@ class BalanceUpdateTest extends PostgresIntegrationTest {
 
     @Autowired
     DataSource dataSource;
+
+    // Captures what the application logs, with DEBUG switched on for the duration of each test.
+    private final Logger applicationLogger = (Logger) LoggerFactory.getLogger("org.ikigaidigital");
+    private final ListAppender<ILoggingEvent> logged = new ListAppender<>();
+    private Level previousLevel;
+
+    @BeforeEach
+    void captureLogs() {
+        previousLevel = applicationLogger.getLevel();
+        applicationLogger.setLevel(Level.DEBUG);
+        logged.start();
+        applicationLogger.addAppender(logged);
+    }
+
+    @AfterEach
+    void stopCapturingLogs() {
+        applicationLogger.detachAppender(logged);
+        applicationLogger.setLevel(previousLevel);
+    }
 
     @Test
     void appliesOneMonthlyInterestToEverySeededTimeDeposit() {
@@ -61,6 +88,43 @@ class BalanceUpdateTest extends PostgresIntegrationTest {
                         .query(Integer.class)
                         .single())
                 .isEqualTo(46);
+    }
+
+    @Test
+    void timeDepositWithAnUnknownPlanTypeKeepsItsBalanceAndIsLoggedAsAnError() {
+        int gold = insertTimeDeposit("gold", "1000.00", 100);
+        int basic = insertTimeDeposit("basic", "1200.00", 100);
+
+        assertThat(mvc.post().uri("/time-deposits/balance-updates")).hasStatus(HttpStatus.NO_CONTENT);
+
+        assertThat(balancesById())
+                .containsExactlyInAnyOrderEntriesOf(
+                        Map.of(gold, new BigDecimal("1000.00"), basic, new BigDecimal("1201.00")));
+        assertThat(logged.list)
+                .filteredOn(event -> event.getLevel() == Level.ERROR)
+                .extracting(ILoggingEvent::getFormattedMessage)
+                .containsExactly("Time Deposit " + gold + " has unknown Plan Type 'gold'; it earns no interest");
+    }
+
+    @Test
+    void logsTheOutcomeAtInfoAndEachTimeDepositsInterestAtDebug() {
+        int basic = insertTimeDeposit("basic", "1200.00", 31);
+        int student = insertTimeDeposit("student", "1000.00", 30);
+
+        assertThat(mvc.post().uri("/time-deposits/balance-updates")).hasStatus(HttpStatus.NO_CONTENT);
+
+        assertThat(logged.list)
+                .filteredOn(event -> event.getLoggerName().endsWith(".BalanceUpdateService"))
+                .extracting(ILoggingEvent::getLevel, ILoggingEvent::getFormattedMessage)
+                .containsExactly(
+                        tuple(
+                                Level.DEBUG,
+                                "Time Deposit " + basic + ": Plan Type basic, Days 31, interest 1.00, Balance 1201.00"),
+                        tuple(
+                                Level.DEBUG,
+                                "Time Deposit " + student
+                                        + ": Plan Type student, Days 30, interest 0.00, Balance 1000.00"),
+                        tuple(Level.INFO, "Balance Update finished, 2 Time Deposits updated"));
     }
 
     /** Loads the same seed data the local profile does. */

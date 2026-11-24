@@ -2,6 +2,7 @@ package org.ikigaidigital.application;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.ArrayList;
 import java.util.List;
 import org.ikigaidigital.TimeDeposit;
 import org.ikigaidigital.TimeDepositCalculator;
@@ -37,12 +38,30 @@ class BalanceUpdateService implements ApplyBalanceUpdateUseCase {
     @Transactional
     public void applyBalanceUpdate() {
         List<TimeDeposit> timeDeposits = loadAllTimeDepositsPort.loadAllTimeDeposits();
+        List<BigDecimal> balancesBefore = timeDeposits.stream()
+                .map(timeDeposit -> roundToCent(timeDeposit.getBalance()))
+                .toList();
 
         timeDepositCalculator.updateBalance(timeDeposits);
 
-        saveBalancesPort.saveBalances(timeDeposits.stream()
-                .map(timeDeposit -> new NewBalance(timeDeposit.getId(), roundToCent(timeDeposit.getBalance())))
-                .toList());
+        List<NewBalance> newBalances = new ArrayList<>(timeDeposits.size());
+        for (int i = 0; i < timeDeposits.size(); i++) {
+            TimeDeposit timeDeposit = timeDeposits.get(i);
+            BigDecimal newBalance = roundToCent(timeDeposit.getBalance());
+            // Balances and interest are amounts of money: DEBUG only.
+            log.debug(
+                    "Time Deposit {}: Plan Type {}, Days {}, interest {}, Balance {}",
+                    timeDeposit.getId(),
+                    timeDeposit.getPlanType(),
+                    timeDeposit.getDays(),
+                    newBalance.subtract(balancesBefore.get(i)),
+                    newBalance);
+            newBalances.add(new NewBalance(timeDeposit.getId(), newBalance));
+        }
+        saveBalancesPort.saveBalances(newBalances);
+        // Assumption (ticket 7): N counts every Time Deposit the Balance Update went through, including those that
+        // earned no interest (outside their Eligibility Window, or with an unknown Plan Type).
+        log.info("Balance Update finished, {} Time Deposits updated", timeDeposits.size());
     }
 
     // The domain keeps the Balance in a Double; rounding to the cent, half-up, removes its floating-point noise
