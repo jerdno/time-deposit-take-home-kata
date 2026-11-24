@@ -33,15 +33,18 @@ class AccessLogFilter extends OncePerRequestFilter {
         long start = System.nanoTime();
         String query = request.getQueryString();
         log.info("Started {} {}{}", request.getMethod(), request.getRequestURI(), query == null ? "" : "?" + query);
+        int status = HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
         try {
             chain.doFilter(request, response);
+            status = response.getStatus();
         } finally {
+            // An exception that escapes the chain has no status yet; the servlet container answers it with a 500.
             long durationMs = (System.nanoTime() - start) / 1_000_000;
             log.info(
                     "Finished {} {} status={} durationMs={}",
                     request.getMethod(),
                     request.getRequestURI(),
-                    response.getStatus(),
+                    status,
                     durationMs);
             MDC.remove(REQUEST_ID_MDC_KEY);
         }
