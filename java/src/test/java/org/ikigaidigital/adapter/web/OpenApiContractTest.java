@@ -35,7 +35,8 @@ class OpenApiContractTest extends ApiIntegrationTest {
 
     @SuppressWarnings("unchecked")
     private static Map<String, Object> idempotencyKeyParameter(Map<String, Object> contract) {
-        Map<String, Object> balanceUpdates = asMap(asMap(contract.get("paths")).get("/time-deposits/balance-updates"));
+        Map<String, Object> balanceUpdates =
+                asMap(asMap(contract.get("paths")).get("/v1/time-deposits/balance-updates"));
         List<Map<String, Object>> parameters =
                 (List<Map<String, Object>>) asMap(balanceUpdates.get("post")).get("parameters");
         return parameters.stream()

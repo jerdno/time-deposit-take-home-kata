@@ -44,7 +44,7 @@ Open <http://localhost:8080/swagger-ui.html>. It shows the contract as written (
 
 Withdrawals are history only and play no part in interest. Every POST without an `Idempotency-Key` adds another month, so a second POST grows the same Balances again. Of two POSTs that overlap in time, one returns `204` and the other returns `409 Conflict` and applies nothing (see [ADR 0001](docs/adr/0001-optimistic-locking-for-the-balance-update.md)).
 
-To make a retry safe, send an `Idempotency-Key` header with the POST. The first call with a key runs the Balance Update; a later call with the same key returns `204` and adds no interest (see [ADR 0002](docs/adr/0002-idempotency-key-for-the-balance-update.md)). To try it in Swagger UI, type a value such as `april-2026` into the `Idempotency-Key` field and click **Execute** twice: both return `204`, and `GET /time-deposits` shows that only the first one added interest. Keys never expire and are kept in the `postgres-data` volume, so pick a value you have not used yet, or start from the seed data with `docker compose down -v`.
+To make a retry safe, send an `Idempotency-Key` header with the POST. The first call with a key runs the Balance Update; a later call with the same key returns `204` and adds no interest (see [ADR 0002](docs/adr/0002-idempotency-key-for-the-balance-update.md)). To try it in Swagger UI, type a value such as `april-2026` into the `Idempotency-Key` field and click **Execute** twice: both return `204`, and `GET /v1/time-deposits` shows that only the first one added interest. Keys never expire and are kept in the `postgres-data` volume, so pick a value you have not used yet, or start from the seed data with `docker compose down -v`.
 
 The same walkthrough with curl:
 
