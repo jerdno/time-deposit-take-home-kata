@@ -48,6 +48,14 @@ class HexagonalArchitectureRulesTest {
     }
 
     @Test
+    void domainRuleReportsADomainClassThatDependsOnTheCompositionRoot() {
+        assertThat(violations(HexagonalArchitecture.domainDependsOnlyOnTheJdkSlf4jApiAndItself(VIOLATING)))
+                .anySatisfy(violation -> assertThat(violation)
+                        .contains("<archfixture.violating.TimeDepositCalculator.start(")
+                        .contains("<archfixture.violating.TimeDepositApplication>"));
+    }
+
+    @Test
     void applicationRuleReportsAnApplicationClassThatDependsOnAnAdapter() {
         assertThat(violations(HexagonalArchitecture.applicationDoesNotDependOnAdapters(VIOLATING)))
                 .anySatisfy(violation -> assertThat(violation)
