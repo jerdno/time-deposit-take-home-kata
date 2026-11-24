@@ -48,6 +48,13 @@ public abstract class PostgresIntegrationTest {
                 .update();
     }
 
+    protected BigDecimal balanceOf(int timeDepositId) {
+        return jdbc.sql("SELECT balance FROM time_deposits WHERE id = ?")
+                .param(timeDepositId)
+                .query(BigDecimal.class)
+                .single();
+    }
+
     /** Inserts a Withdrawal of the given Time Deposit and returns its generated id. */
     protected int insertWithdrawal(int timeDepositId, String amount, LocalDate date) {
         return jdbc.sql("INSERT INTO withdrawals (time_deposit_id, amount, date) VALUES (?, ?, ?) RETURNING id")
