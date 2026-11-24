@@ -38,7 +38,7 @@ class BalanceUpdateService implements ApplyBalanceUpdateUseCase {
         this.timeDepositCalculator = timeDepositCalculator;
     }
 
-    // One transaction: every Balance is saved, or none is.
+    // One transaction: every changed Balance is saved, or none is.
     // Assumption (ticket 7): every call adds a month of interest. Triggering it once a month is the caller's job
     // (e.g. an external scheduler); retry safety is ticket 11.
     @Override
