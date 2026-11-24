@@ -3,9 +3,13 @@ package org.ikigaidigital.adapter.web;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.UUID;
+import java.util.regex.Pattern;
 import org.ikigaidigital.support.PostgresIntegrationTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.slf4j.MDC;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.http.HttpStatus;
@@ -54,5 +58,30 @@ class AccessLogFilterTest extends PostgresIntegrationTest {
         assertThat(output.getOut().lines().filter(line -> line.contains("[bad-size]")))
                 .anySatisfy(line ->
                         assertThat(line).containsPattern("Finished GET /time-deposits status=400 durationMs=\\d+$"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+            strings = {
+                "/swagger-ui/index.html",
+                "/swagger-ui.html",
+                "/v3/api-docs",
+                "/v3/api-docs/swagger-config",
+                "/openapi.yaml"
+            })
+    void doesNotLogSwaggerAssets(String path, CapturedOutput output) {
+        MvcTestResult result = mvc.get().uri(path).exchange();
+
+        assertThat(result.getResponse().getStatus()).isLessThan(400);
+        // The captured output holds the whole class's output, so look for this path's access-log lines only.
+        assertThat(output.getOut()).doesNotContainPattern("(Started|Finished) GET " + Pattern.quote(path) + "(\\R| )");
+    }
+
+    @Test
+    void leavesTheMdcEmptyAfterTheRequest() {
+        assertThat(mvc.get().uri("/time-deposits").header("X-Request-Id", "short-lived"))
+                .hasStatus(HttpStatus.OK);
+
+        assertThat(MDC.getCopyOfContextMap()).isNullOrEmpty();
     }
 }
