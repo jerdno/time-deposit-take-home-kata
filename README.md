@@ -6,6 +6,7 @@
 - A negative Balance is pinned as the calculator handles it today: interest is negative and the Balance shrinks, rounding half-up (away from zero) on a half cent. (ticket 3)
 - Plan Type matching is case-sensitive today, so `"Basic"` earns no interest, the same as an unknown Plan Type such as `"gold"`. Both are pinned as "no interest, Balance unchanged" rather than rejected. (ticket 3)
 - `TimeDepositCalculator`'s no-arg constructor was removed; it now takes a `PlanTypeResolver`. The README protects only `TimeDeposit` and the `updateBalance` signature, and the only caller in this repo was the test. (ticket 4)
+- A missing (null) Plan Type is bad data like any unknown value: it is logged at `ERROR` and earns no interest. The original calculator threw a `NullPointerException` for it once Days passed 30. (ticket 4)
 
 # Time Deposit Refactoring Kata - Take-Home Assignment
 
