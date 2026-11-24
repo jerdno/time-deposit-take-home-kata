@@ -63,16 +63,18 @@ paths:
           in: header
           required: false
           description: |
-            A unique value per intended Balance Update, for example a UUID. Up to 255 letters, digits and
-            `._:+/=-`, bare or in double quotes (the Structured Field string form of the IETF Idempotency-Key
-            draft); `"abc"` and `abc` are the same key. Keys never expire.
+            A unique value per intended Balance Update, for example a UUID such as
+            `8e03978e-40d5-43e8-bc93-6894a57f9324`. Up to 255 letters, digits and `._:+/=-`, bare or in double
+            quotes (the Structured Field string form of the IETF Idempotency-Key draft); `"abc"` and `abc` are the
+            same key. Keys never expire. Leave it empty and every call adds interest.
           # Assumption (ticket 11): up to 255 characters from a restricted set, so the key is safe to log; any other
           # value is a 400 and adds no interest. The quoted form is accepted because the IETF draft defines the header
           # as a Structured Field string.
           schema:
             type: string
             pattern: '^([A-Za-z0-9._:+/=-]{1,255}|"[A-Za-z0-9._:+/=-]{1,255}")$'
-          example: 8e03978e-40d5-43e8-bc93-6894a57f9324
+          # No example or default, here or on the schema: Swagger UI copies either into the field on Try it out, and a
+          # fixed key would make every POST from Swagger UI after the first a replay that adds no interest.
       responses:
         '204':
           description: |
