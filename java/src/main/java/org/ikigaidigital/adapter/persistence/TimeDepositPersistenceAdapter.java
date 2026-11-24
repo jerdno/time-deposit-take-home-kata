@@ -17,10 +17,14 @@ import org.ikigaidigital.application.model.TimeDepositView;
 import org.ikigaidigital.application.model.WithdrawalView;
 import org.ikigaidigital.application.port.out.LoadTimeDepositPagePort;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 
 @Component
 class TimeDepositPersistenceAdapter implements LoadTimeDepositPagePort {
+
+    // The order the contract promises for a page of Time Deposits.
+    private static final Sort BY_ID = Sort.by("id");
 
     private final TimeDepositJpaRepository timeDeposits;
     private final WithdrawalJpaRepository withdrawals;
@@ -40,7 +44,8 @@ class TimeDepositPersistenceAdapter implements LoadTimeDepositPagePort {
             // JPA takes the offset as an int; a page this far out can only be past the last one.
             return emptyPage(query);
         }
-        List<TimeDepositWithTotal> rows = timeDeposits.findPageWithTotal(PageRequest.of(query.page(), query.size()));
+        List<TimeDepositWithTotal> rows =
+                timeDeposits.findPageWithTotal(PageRequest.of(query.page(), query.size(), BY_ID));
         if (rows.isEmpty()) {
             return emptyPage(query);
         }
