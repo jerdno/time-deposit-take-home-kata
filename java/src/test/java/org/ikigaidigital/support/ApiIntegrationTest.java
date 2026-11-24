@@ -4,26 +4,33 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureRestTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
+import org.springframework.test.web.servlet.client.RestTestClient;
 
 /**
  * Base class for API tests: HTTP requests through MockMvc against the whole application, backed by a real PostgreSQL
- * started by Testcontainers.
+ * started by Testcontainers. {@link #client} sends its requests through the same MockMvc and reads response bodies
+ * into the API model classes generated from the contract; {@link #mvc} asserts on the raw response.
  *
  * <p>Only the schema migrations run (no {@code local} profile), so every test starts from empty tables and inserts
  * the rows it needs with the helpers below.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
+@AutoConfigureRestTestClient
 @Import(PostgresTestcontainersConfiguration.class)
 public abstract class ApiIntegrationTest {
 
     @Autowired
     protected MockMvcTester mvc;
+
+    @Autowired
+    protected RestTestClient client;
 
     @Autowired
     protected JdbcClient jdbc;
