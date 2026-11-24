@@ -109,6 +109,20 @@ class BalanceUpdateTest extends PostgresIntegrationTest {
     }
 
     @Test
+    void timeDepositThatEarnsNoInterestKeepsItsStoredBalanceExactly() {
+        // 17 significant digits: more than a Double holds, so 10000000000000000.01 would become ...00 through one.
+        int gold = insertTimeDeposit("gold", "10000000000000000.01", 100);
+        int notYetEligible = insertTimeDeposit("basic", "10000000000000000.01", 30);
+
+        assertThat(postBalanceUpdate()).hasStatus(HttpStatus.NO_CONTENT);
+
+        assertThat(balancesById())
+                .containsExactlyInAnyOrderEntriesOf(Map.of(
+                        gold, new BigDecimal("10000000000000000.01"),
+                        notYetEligible, new BigDecimal("10000000000000000.01")));
+    }
+
+    @Test
     void logsTheOutcomeAtInfoAndEachTimeDepositsInterestAtDebug() {
         int basic = insertTimeDeposit("basic", "1200.00", 31);
         int student = insertTimeDeposit("student", "1000.00", 30);

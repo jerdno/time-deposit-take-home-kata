@@ -17,8 +17,8 @@ public class TimeDepositCalculator {
     }
 
     /** Balance Update: adds one Monthly Interest, rounded to the cent half-up, to each Time Deposit's Balance. */
-    public void updateBalance(List<TimeDeposit> xs) {
-        for (TimeDeposit timeDeposit : xs) {
+    public void updateBalance(List<TimeDeposit> timeDeposits) {
+        for (TimeDeposit timeDeposit : timeDeposits) {
             PlanType planType = planTypeResolver.resolve(timeDeposit);
             double monthlyInterest =
                     planType.isEligible(timeDeposit) ? planType.calculateMonthlyInterest(timeDeposit) : 0;

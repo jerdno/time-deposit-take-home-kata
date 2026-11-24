@@ -14,7 +14,8 @@ import org.springframework.mock.web.MockHttpServletResponse;
 
 /**
  * An exception that no handler turns into a response escapes the filter chain; the servlet container answers it with
- * a 500. The filter is driven directly here, because every error the application raises over HTTP is handled.
+ * a 500. The filter is driven directly here, because over HTTP {@code ProblemDetailsExceptionHandler} turns every
+ * exception a controller raises into a response; only one thrown by a later filter could still escape.
  */
 @ExtendWith(OutputCaptureExtension.class)
 class AccessLogFilterFailureTest {
