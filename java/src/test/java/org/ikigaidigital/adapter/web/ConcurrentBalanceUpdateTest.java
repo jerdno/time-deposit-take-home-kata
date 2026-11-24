@@ -13,14 +13,14 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import javax.sql.DataSource;
-import org.ikigaidigital.support.PostgresIntegrationTest;
+import org.ikigaidigital.support.ApiIntegrationTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 
-class ConcurrentBalanceUpdateTest extends PostgresIntegrationTest {
+class ConcurrentBalanceUpdateTest extends ApiIntegrationTest {
 
     private static final Duration TIMEOUT = Duration.ofSeconds(30);
 
@@ -82,7 +82,7 @@ class ConcurrentBalanceUpdateTest extends PostgresIntegrationTest {
     }
 
     private MvcTestResult postBalanceUpdate() {
-        return mvc.post().uri("/time-deposits/balance-updates").exchange();
+        return mvc.post().uri("/v1/time-deposits/balance-updates").exchange();
     }
 
     private void awaitUpdatesBlockedOnTheLock(int expected) throws InterruptedException {

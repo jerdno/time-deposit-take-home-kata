@@ -18,7 +18,7 @@ The code follows a hexagonal layout, and ArchUnit tests (`HexagonalArchitectureT
 - `planType` is stored and returned as a plain string: no CHECK constraint in the database and no enum in the contract. A Time Deposit with an unknown Plan Type is bad data the application must survive and still list, not reject. (ticket 5)
 - A page past the last one returns `200` with an empty `items` list, not an error. (ticket 5)
 - A Time Deposit's Withdrawals are listed by `id` ascending (the order they were recorded); the README does not specify an order. (ticket 5)
-- Every call to `POST /time-deposits/balance-updates` adds a month of interest. Triggering it once a month is the caller's job (e.g. an external scheduler); retry safety is ticket 11. (ticket 7)
+- Every call to `POST /v1/time-deposits/balance-updates` adds a month of interest. Triggering it once a month is the caller's job (e.g. an external scheduler); retry safety is ticket 11. (ticket 7)
 - The whole set of Time Deposits fits in memory during a Balance Update. Batching is out of scope. (ticket 7)
 - No row locks. Optimistic locking makes concurrent Balance Updates deterministic: each `204` means exactly one month of interest was applied, and the loser returns `409` having applied nothing. See `docs/adr/0001-optimistic-locking-for-the-balance-update.md`. (ticket 7)
 - The "Balance Update finished, N Time Deposits updated" log counts every Time Deposit the Balance Update went through, including those that earned no interest. (ticket 7)

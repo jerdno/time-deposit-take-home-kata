@@ -11,7 +11,7 @@ import ch.qos.logback.core.read.ListAppender;
 import java.math.BigDecimal;
 import java.util.Map;
 import javax.sql.DataSource;
-import org.ikigaidigital.support.PostgresIntegrationTest;
+import org.ikigaidigital.support.ApiIntegrationTest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,7 +22,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 
-class BalanceUpdateTest extends PostgresIntegrationTest {
+class BalanceUpdateTest extends ApiIntegrationTest {
 
     @Autowired
     DataSource dataSource;
@@ -130,7 +130,7 @@ class BalanceUpdateTest extends PostgresIntegrationTest {
     }
 
     private MvcTestResult postBalanceUpdate() {
-        return mvc.post().uri("/time-deposits/balance-updates").exchange();
+        return mvc.post().uri("/v1/time-deposits/balance-updates").exchange();
     }
 
     /** Loads the same seed data the local profile does. */

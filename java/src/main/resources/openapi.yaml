@@ -45,7 +45,7 @@ paths:
                 $ref: '#/components/schemas/TimeDepositPage'
         '400':
           $ref: '#/components/responses/BadRequest'
-  /time-deposits/balance-updates:
+  /v1/time-deposits/balance-updates:
     post:
       tags: [Time Deposits]
       operationId: applyBalanceUpdate

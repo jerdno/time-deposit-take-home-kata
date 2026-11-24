@@ -5,13 +5,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.math.BigDecimal;
 import org.ikigaidigital.application.port.in.ApplyBalanceUpdateUseCase;
-import org.ikigaidigital.support.PostgresIntegrationTest;
+import org.ikigaidigital.support.ApiIntegrationTest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 
-class BalanceUpdateRollbackTest extends PostgresIntegrationTest {
+class BalanceUpdateRollbackTest extends ApiIntegrationTest {
 
     @Autowired
     ApplyBalanceUpdateUseCase balanceUpdate;

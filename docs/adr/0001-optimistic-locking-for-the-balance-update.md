@@ -1,6 +1,6 @@
 # Optimistic locking for the Balance Update, with 409 for the loser
 
-Two overlapping calls to `POST /time-deposits/balance-updates` must not silently overwrite each other's Balances. The Balance Update runs in one transaction and saves each Time Deposit with a check on its `version` (JPA `@Version`), so when two overlap, the second to write finds a changed `version`, rolls back as a whole and returns `409 Conflict`. Each `204` therefore means exactly one month of interest was applied, and a `409` means that call applied nothing.
+Two overlapping calls to `POST /v1/time-deposits/balance-updates` must not silently overwrite each other's Balances. The Balance Update runs in one transaction and saves each Time Deposit with a check on its `version` (JPA `@Version`), so when two overlap, the second to write finds a changed `version`, rolls back as a whole and returns `409 Conflict`. Each `204` therefore means exactly one month of interest was applied, and a `409` means that call applied nothing.
 
 ## Considered Options
 
