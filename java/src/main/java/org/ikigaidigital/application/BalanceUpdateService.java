@@ -1,9 +1,12 @@
 package org.ikigaidigital.application;
 
+import static java.util.stream.Collectors.toMap;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import org.ikigaidigital.TimeDeposit;
 import org.ikigaidigital.TimeDepositCalculator;
 import org.ikigaidigital.application.port.in.ApplyBalanceUpdateUseCase;
@@ -42,15 +45,13 @@ class BalanceUpdateService implements ApplyBalanceUpdateUseCase {
     @Transactional
     public void applyBalanceUpdate() {
         List<TimeDeposit> timeDeposits = loadAllTimeDepositsPort.loadAllTimeDeposits();
-        List<BigDecimal> balancesBefore = timeDeposits.stream()
-                .map(timeDeposit -> roundToCent(timeDeposit.getBalance()))
-                .toList();
+        Map<Integer, BigDecimal> balancesBeforeById = timeDeposits.stream()
+                .collect(toMap(TimeDeposit::getId, timeDeposit -> roundToCent(timeDeposit.getBalance())));
 
         timeDepositCalculator.updateBalance(timeDeposits);
 
         List<NewBalance> newBalances = new ArrayList<>(timeDeposits.size());
-        for (int i = 0; i < timeDeposits.size(); i++) {
-            TimeDeposit timeDeposit = timeDeposits.get(i);
+        for (TimeDeposit timeDeposit : timeDeposits) {
             BigDecimal newBalance = roundToCent(timeDeposit.getBalance());
             // Balances and interest are amounts of money: DEBUG only.
             log.debug(
@@ -58,7 +59,7 @@ class BalanceUpdateService implements ApplyBalanceUpdateUseCase {
                     timeDeposit.getId(),
                     timeDeposit.getPlanType(),
                     timeDeposit.getDays(),
-                    newBalance.subtract(balancesBefore.get(i)),
+                    newBalance.subtract(balancesBeforeById.get(timeDeposit.getId())),
                     newBalance);
             newBalances.add(new NewBalance(timeDeposit.getId(), newBalance));
         }
