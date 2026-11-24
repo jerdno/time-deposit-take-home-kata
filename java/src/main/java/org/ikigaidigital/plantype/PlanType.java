@@ -3,8 +3,8 @@ package org.ikigaidigital.plantype;
 import org.ikigaidigital.TimeDeposit;
 
 /**
- * The product a Time Deposit belongs to. It owns that product's interest terms. Adding a Plan Type means adding
- * an implementation of this interface and registering it with {@link PlanTypeResolver}.
+ * The Plan Type a Time Deposit belongs to. It owns its own interest terms: rate and Eligibility Window. Adding a
+ * Plan Type means adding an implementation of this interface and registering it with {@link PlanTypeResolver}.
  */
 public interface PlanType {
 
