@@ -3,7 +3,6 @@ package org.ikigaidigital.application;
 import java.util.List;
 import org.ikigaidigital.TimeDepositCalculator;
 import org.ikigaidigital.plantype.BasicPlan;
-import org.ikigaidigital.plantype.PlanType;
 import org.ikigaidigital.plantype.PlanTypeResolver;
 import org.ikigaidigital.plantype.PremiumPlan;
 import org.ikigaidigital.plantype.StudentPlan;
@@ -12,29 +11,14 @@ import org.springframework.context.annotation.Configuration;
 
 /**
  * Wires the domain into Spring. The domain packages stay free of Spring, so their beans are declared here. A new Plan
- * Type is one more bean: the resolver picks up every {@link PlanType} bean.
+ * Type is one more entry in the list the {@link PlanTypeResolver} is built from.
  */
 @Configuration(proxyBeanMethods = false)
 class DomainConfiguration {
 
     @Bean
-    BasicPlan basicPlan() {
-        return new BasicPlan();
-    }
-
-    @Bean
-    StudentPlan studentPlan() {
-        return new StudentPlan();
-    }
-
-    @Bean
-    PremiumPlan premiumPlan() {
-        return new PremiumPlan();
-    }
-
-    @Bean
-    PlanTypeResolver planTypeResolver(List<PlanType> planTypes) {
-        return new PlanTypeResolver(planTypes);
+    PlanTypeResolver planTypeResolver() {
+        return new PlanTypeResolver(List.of(new BasicPlan(), new StudentPlan(), new PremiumPlan()));
     }
 
     @Bean
