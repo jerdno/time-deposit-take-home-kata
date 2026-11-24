@@ -45,7 +45,11 @@ class ConcurrentBalanceUpdateTest extends PostgresIntegrationTest {
                 .hasContentType(MediaType.APPLICATION_PROBLEM_JSON)
                 .bodyJson()
                 .isLenientlyEqualTo("""
-                        { "title": "Conflict", "status": 409 }
+                        {
+                          "title": "Conflict",
+                          "status": 409,
+                          "detail": "A concurrent Balance Update changed a Time Deposit first. This one was rolled back and applied no interest."
+                        }
                         """);
 
         // Exactly one month: 1200.00 x 1% / 12 = 1.00 and 1200.00 x 5% / 12 = 5.00.
