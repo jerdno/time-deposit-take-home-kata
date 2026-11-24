@@ -15,7 +15,10 @@ class RunOnceService implements RunOnceUseCase {
     }
 
     // The key is claimed first, so a concurrent call with the same key waits on it before doing any work, and the work
-    // joins this transaction: the key is committed together with the work's changes, or rolled back with them.
+    // joins this transaction: the key is committed together with the work's changes, or rolled back with them
+    // (docs/adr/0002-idempotency-key-for-the-balance-update.md).
+    // Assumption (ticket 11): a concurrent call with the same key waits for the first and is then a replay (204), not
+    // a 409 "still in progress" as the IETF Idempotency-Key draft suggests.
     @Override
     @Transactional
     public Outcome runOnce(String idempotencyKey, Runnable work) {
