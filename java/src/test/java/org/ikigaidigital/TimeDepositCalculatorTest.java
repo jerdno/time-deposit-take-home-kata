@@ -134,4 +134,37 @@ class TimeDepositCalculatorTest {
             assertThat(balanceAfterUpdate("basic", -150.00, 31)).isEqualTo(-150.13);
         }
     }
+
+    // Assumption (ticket 3): Plan Type matching is case-sensitive today, so "Basic" is as unknown as "gold".
+    // Both are pinned as earning no interest rather than being rejected.
+    @Nested
+    class UnknownPlanType {
+
+        @Test
+        void goldEarnsNoInterest() {
+            assertThat(balanceAfterUpdate("gold", 1200.00, 100)).isEqualTo(1200.00);
+        }
+
+        @Test
+        void capitalisedBasicEarnsNoInterest() {
+            assertThat(balanceAfterUpdate("Basic", 1200.00, 100)).isEqualTo(1200.00);
+        }
+    }
+
+    @Nested
+    class SeveralTimeDeposits {
+
+        @Test
+        void eachIsUpdatedIndependently() {
+            TimeDeposit basic = new TimeDeposit(1, "basic", 1200.00, 31);
+            TimeDeposit student = new TimeDeposit(2, "student", 1200.00, 366);
+            TimeDeposit premium = new TimeDeposit(3, "premium", 1000.00, 46);
+
+            calculator.updateBalance(List.of(basic, student, premium));
+
+            assertThat(basic.getBalance()).isEqualTo(1201.00);
+            assertThat(student.getBalance()).isEqualTo(1200.00);
+            assertThat(premium.getBalance()).isEqualTo(1004.17);
+        }
+    }
 }
