@@ -1,0 +1,19 @@
+spring:
+  application:
+    name: time-deposit-kata
+  flyway:
+    # Schema only. The local profile adds the seed data location (see application-local.yaml).
+    locations: classpath:db/migration
+  jpa:
+    hibernate:
+      # Flyway owns the schema; Hibernate only checks that the entities match it.
+      ddl-auto: validate
+    open-in-view: false
+springdoc:
+  swagger-ui:
+    # Swagger UI shows the contract as written (copied to static/ at build time, see pom.xml), not the spec springdoc
+    # derives from the code at /v3/api-docs. springdoc only serves Swagger UI while its api-docs are enabled.
+    url: /openapi.yaml
+server:
+  mime-mappings:
+    yaml: application/yaml

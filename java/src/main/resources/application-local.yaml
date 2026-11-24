@@ -1,0 +1,10 @@
+# Profile for running the app locally, e.g. with docker compose. Override the datasource with the usual
+# SPRING_DATASOURCE_URL / SPRING_DATASOURCE_USERNAME / SPRING_DATASOURCE_PASSWORD environment variables.
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/time_deposits
+    username: time_deposits
+    password: time_deposits
+  flyway:
+    # The schema plus the seed data. Only this profile enables the seed location.
+    locations: classpath:db/migration,classpath:db/seed
