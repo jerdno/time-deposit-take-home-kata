@@ -45,13 +45,14 @@ class BalanceUpdateService implements ApplyBalanceUpdateUseCase {
     @Transactional
     public void applyBalanceUpdate() {
         List<TimeDeposit> timeDeposits = loadAllTimeDepositsPort.loadAllTimeDeposits();
-        Map<Integer, BigDecimal> balancesBeforeById = timeDeposits.stream()
-                .collect(toMap(TimeDeposit::getId, timeDeposit -> roundToCent(timeDeposit.getBalance())));
+        Map<Integer, Double> balancesBeforeById =
+                timeDeposits.stream().collect(toMap(TimeDeposit::getId, TimeDeposit::getBalance));
 
         timeDepositCalculator.updateBalance(timeDeposits);
 
         List<NewBalance> newBalances = new ArrayList<>(timeDeposits.size());
         for (TimeDeposit timeDeposit : timeDeposits) {
+            Double balanceBefore = balancesBeforeById.get(timeDeposit.getId());
             BigDecimal newBalance = roundToCent(timeDeposit.getBalance());
             // Balances and interest are amounts of money: DEBUG only.
             log.debug(
@@ -59,9 +60,15 @@ class BalanceUpdateService implements ApplyBalanceUpdateUseCase {
                     timeDeposit.getId(),
                     timeDeposit.getPlanType(),
                     timeDeposit.getDays(),
-                    newBalance.subtract(balancesBeforeById.get(timeDeposit.getId())),
+                    newBalance.subtract(roundToCent(balanceBefore)),
                     newBalance);
-            newBalances.add(new NewBalance(timeDeposit.getId(), newBalance));
+            // Assumption (ticket 7): a Balance the calculator left unchanged (no interest: outside the Eligibility
+            // Window, or an unknown Plan Type) is not saved, so it keeps its stored value exactly, even one with more
+            // digits than the Double holds. Only Balances that receive interest go through the Double and may lose
+            // cents above 10^13.
+            if (!timeDeposit.getBalance().equals(balanceBefore)) {
+                newBalances.add(new NewBalance(timeDeposit.getId(), newBalance));
+            }
         }
         try {
             saveBalancesPort.saveBalances(newBalances);
