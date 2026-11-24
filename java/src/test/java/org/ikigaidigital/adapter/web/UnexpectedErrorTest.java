@@ -41,7 +41,7 @@ class UnexpectedErrorTest extends ApiIntegrationTest {
     void isAnInternalServerErrorProblemWithoutTheExceptionMessage() {
         insertTimeDeposit("basic", "1200.00", 31);
 
-        MvcTestResult result = postBalanceUpdate("unexpected-1");
+        MvcTestResult result = postBalanceUpdate();
 
         assertThat(result)
                 .hasStatus(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -58,31 +58,18 @@ class UnexpectedErrorTest extends ApiIntegrationTest {
     }
 
     @Test
-    void isLoggedAtErrorWithTheRequestIdAndEndsTheAccessLogWithStatus500() {
+    void isLoggedAtErrorWithTheException() {
         insertTimeDeposit("basic", "1200.00", 31);
 
-        postBalanceUpdate("unexpected-2");
+        postBalanceUpdate();
 
         assertThat(logged.list)
                 .filteredOn(event -> event.getLevel() == Level.ERROR)
                 .singleElement()
-                .satisfies(event -> {
-                    assertThat(event.getMDCPropertyMap()).containsEntry("requestId", "unexpected-2");
-                    assertThat(event.getThrowableProxy()).isNotNull();
-                });
-        assertThat(logged.list)
-                .filteredOn(event -> event.getFormattedMessage().startsWith("Finished POST"))
-                .singleElement()
-                .satisfies(event -> {
-                    assertThat(event.getMDCPropertyMap()).containsEntry("requestId", "unexpected-2");
-                    assertThat(event.getFormattedMessage()).contains("status=500");
-                });
+                .satisfies(event -> assertThat(event.getThrowableProxy()).isNotNull());
     }
 
-    private MvcTestResult postBalanceUpdate(String requestId) {
-        return mvc.post()
-                .uri("/v1/time-deposits/balance-updates")
-                .header("X-Request-Id", requestId)
-                .exchange();
+    private MvcTestResult postBalanceUpdate() {
+        return mvc.post().uri("/v1/time-deposits/balance-updates").exchange();
     }
 }

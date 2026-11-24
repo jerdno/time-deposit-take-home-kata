@@ -11,7 +11,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
@@ -86,7 +85,7 @@ class IdempotentBalanceUpdateTest extends ApiIntegrationTest {
         int id = insertTimeDeposit("basic", "1200.00", 31);
         failingUpdates.failWhen("true");
 
-        assertThat(postBalanceUpdate(KEY)).hasFailed().failure().cause().isInstanceOf(DataAccessException.class);
+        assertThat(postBalanceUpdate(KEY)).hasStatus(HttpStatus.INTERNAL_SERVER_ERROR);
         assertThat(balancesById()).containsExactlyEntriesOf(Map.of(id, new BigDecimal("1200.00")));
 
         failingUpdates.remove();
