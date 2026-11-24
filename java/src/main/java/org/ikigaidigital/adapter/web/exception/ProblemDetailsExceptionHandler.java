@@ -38,10 +38,7 @@ class ProblemDetailsExceptionHandler extends ResponseEntityExceptionHandler {
     /** A concurrent Balance Update won the race; this one was rolled back and applied nothing. */
     @ExceptionHandler(ConcurrentBalanceUpdateException.class)
     ProblemDetail handleConcurrentBalanceUpdate(ConcurrentBalanceUpdateException exception) {
-        return ProblemDetail.forStatusAndDetail(
-                HttpStatus.CONFLICT,
-                "A concurrent Balance Update changed a Time Deposit first. This one was rolled back and applied no"
-                        + " interest.");
+        return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, exception.getMessage());
     }
 
     // The property path is "getTimeDeposits.size"; the client only knows the parameter name.
