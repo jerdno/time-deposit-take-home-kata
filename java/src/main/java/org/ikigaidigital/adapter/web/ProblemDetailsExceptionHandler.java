@@ -5,6 +5,7 @@ import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Path;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
+import org.ikigaidigital.application.port.in.ConcurrentBalanceUpdateException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -32,6 +33,15 @@ class ProblemDetailsExceptionHandler extends ResponseEntityExceptionHandler {
                 .sorted()
                 .collect(Collectors.joining("; "));
         return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, detail);
+    }
+
+    /** A concurrent Balance Update won the race; this one was rolled back and applied nothing. */
+    @ExceptionHandler(ConcurrentBalanceUpdateException.class)
+    ProblemDetail handleConcurrentBalanceUpdate(ConcurrentBalanceUpdateException exception) {
+        return ProblemDetail.forStatusAndDetail(
+                HttpStatus.CONFLICT,
+                "A concurrent Balance Update changed a Time Deposit first. This one was rolled back and applied no"
+                        + " interest.");
     }
 
     // The property path is "getTimeDeposits.size"; the client only knows the parameter name.

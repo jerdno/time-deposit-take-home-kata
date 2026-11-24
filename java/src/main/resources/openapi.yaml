@@ -57,6 +57,14 @@ paths:
       responses:
         '204':
           description: The Balance Update was applied to every Time Deposit.
+        '409':
+          description: |
+            A concurrent Balance Update changed a Time Deposit first. This one was rolled back as a whole and
+            applied no interest; the one that won applied the month's interest.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
 components:
   responses:
     BadRequest:

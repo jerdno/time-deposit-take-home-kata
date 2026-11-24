@@ -9,6 +9,11 @@ spring:
       # Flyway owns the schema; Hibernate only checks that the entities match it.
       ddl-auto: validate
     open-in-view: false
+    properties:
+      hibernate:
+        # UPDATEs go out in primary-key order, so concurrent Balance Updates lock rows in the same order and cannot
+        # deadlock: the later one waits, then fails its optimistic version check (409).
+        order_updates: true
 springdoc:
   swagger-ui:
     # Swagger UI shows the contract as written (copied to static/ at build time, see pom.xml), not the spec springdoc

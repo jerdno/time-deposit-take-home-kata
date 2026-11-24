@@ -6,6 +6,9 @@ public interface ApplyBalanceUpdateUseCase {
     /**
      * Runs one Balance Update in a transaction. It joins the caller's transaction when there is one, so a caller can
      * wrap it with work of its own.
+     *
+     * @throws ConcurrentBalanceUpdateException if a concurrent Balance Update changed a Time Deposit first; nothing
+     *     was applied
      */
     void applyBalanceUpdate();
 }
