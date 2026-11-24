@@ -2,7 +2,7 @@
 # startup. See "How to run" in the README.
 services:
   postgres:
-    # The same image as the Testcontainers tests. Flyway warns that PostgreSQL 19 is newer than it has verified.
+    # The same image as the Testcontainers tests. Not PostgreSQL 19: Flyway warns that 19 is newer than it has verified.
     image: postgres:18-alpine
     environment:
       POSTGRES_DB: time_deposits
