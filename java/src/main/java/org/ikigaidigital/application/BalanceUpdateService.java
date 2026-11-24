@@ -1,8 +1,5 @@
 package org.ikigaidigital.application;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.util.ArrayList;
 import java.util.List;
 import org.ikigaidigital.TimeDeposit;
 import org.ikigaidigital.TimeDepositCalculator;
@@ -10,7 +7,6 @@ import org.ikigaidigital.application.port.in.ApplyBalanceUpdateUseCase;
 import org.ikigaidigital.application.port.in.exception.ConcurrentBalanceUpdateException;
 import org.ikigaidigital.application.port.out.LoadAllTimeDepositsPort;
 import org.ikigaidigital.application.port.out.SaveBalancesPort;
-import org.ikigaidigital.application.port.out.SaveBalancesPort.NewBalance;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.OptimisticLockingFailureException;
@@ -43,13 +39,8 @@ class BalanceUpdateService implements ApplyBalanceUpdateUseCase {
     public void applyBalanceUpdate() {
         List<TimeDeposit> timeDeposits = loadAllTimeDepositsPort.loadAllTimeDeposits();
         timeDepositCalculator.updateBalance(timeDeposits);
-
-        List<NewBalance> newBalances = new ArrayList<>(timeDeposits.size());
-        for (TimeDeposit timeDeposit : timeDeposits) {
-            newBalances.add(new NewBalance(timeDeposit.getId(), roundToCent(timeDeposit.getBalance())));
-        }
         try {
-            saveBalancesPort.saveBalances(newBalances);
+            saveBalancesPort.saveBalances(timeDeposits);
         } catch (OptimisticLockingFailureException e) {
             // Assumption (ticket 7): no row locks. Optimistic locking makes concurrent calls deterministic: each 204
             // means exactly one month of interest was applied, and the loser rolls back as a whole
@@ -59,12 +50,5 @@ class BalanceUpdateService implements ApplyBalanceUpdateUseCase {
         // Assumption (ticket 7): N counts every Time Deposit the Balance Update went through, including those that
         // earned no interest (outside their Eligibility Window, or with an unknown Plan Type).
         log.info("Balance Update finished, {} Time Deposits updated", timeDeposits.size());
-    }
-
-    // The domain keeps the Balance in a Double; rounding to the cent, half-up, removes its floating-point noise
-    // (e.g. 1000.10 + 0.83 is 1000.9300000000001 as a double and is saved as 1000.93). BigDecimal.valueOf takes the
-    // shortest decimal form of the double.
-    private static BigDecimal roundToCent(Double balance) {
-        return BigDecimal.valueOf(balance).setScale(2, RoundingMode.HALF_UP);
     }
 }

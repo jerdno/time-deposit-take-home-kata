@@ -4,6 +4,8 @@ import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 import java.util.Map;
 import org.ikigaidigital.TimeDeposit;
@@ -94,12 +96,22 @@ class TimeDepositPersistenceAdapter implements LoadTimeDepositPagePort, LoadAllT
      * between, no row matches and the flush throws an {@link org.springframework.dao.OptimisticLockingFailureException}.
      */
     @Override
-    public void saveBalances(List<NewBalance> newBalances) {
-        for (NewBalance newBalance : newBalances) {
+    public void saveBalances(List<TimeDeposit> updatedTimeDeposits) {
+        for (TimeDeposit timeDeposit : updatedTimeDeposits) {
             // Found in the persistence context, where loadAllTimeDeposits left it: no query.
-            timeDeposits.findById(newBalance.timeDepositId()).orElseThrow().changeBalance(newBalance.balance());
+            timeDeposits
+                    .findById(timeDeposit.getId())
+                    .orElseThrow()
+                    .changeBalance(roundToCent(timeDeposit.getBalance()));
         }
         timeDeposits.flush();
+    }
+
+    // The domain keeps the Balance in a Double; rounding to the cent, half-up, removes its floating-point noise
+    // (e.g. 1000.10 + 0.83 is 1000.9300000000001 as a double and is saved as 1000.93). BigDecimal.valueOf takes the
+    // shortest decimal form of the double.
+    private static BigDecimal roundToCent(Double balance) {
+        return BigDecimal.valueOf(balance).setScale(2, RoundingMode.HALF_UP);
     }
 
     // Assumption (ticket 7): the domain's Balance is a Double (TimeDeposit must not change), which holds 15
