@@ -6,17 +6,21 @@ import static java.util.stream.Collectors.toList;
 
 import java.util.List;
 import java.util.Map;
+import org.ikigaidigital.TimeDeposit;
 import org.ikigaidigital.adapter.persistence.TimeDepositJpaRepository.TimeDepositWithTotal;
+import org.ikigaidigital.application.port.out.LoadAllTimeDepositsPort;
 import org.ikigaidigital.application.port.out.LoadTimeDepositPagePort;
+import org.ikigaidigital.application.port.out.SaveBalancesPort;
 import org.ikigaidigital.application.readmodel.PageQuery;
 import org.ikigaidigital.application.readmodel.TimeDepositPage;
 import org.ikigaidigital.application.readmodel.TimeDepositView;
 import org.ikigaidigital.application.readmodel.WithdrawalView;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 
 @Component
-class TimeDepositPersistenceAdapter implements LoadTimeDepositPagePort {
+class TimeDepositPersistenceAdapter implements LoadTimeDepositPagePort, LoadAllTimeDepositsPort, SaveBalancesPort {
 
     private final TimeDepositJpaRepository timeDeposits;
     private final WithdrawalJpaRepository withdrawals;
@@ -64,6 +68,38 @@ class TimeDepositPersistenceAdapter implements LoadTimeDepositPagePort {
     // row to carry the total, so it is counted separately.
     private TimeDepositPage emptyPage(PageQuery query) {
         return new TimeDepositPage(List.of(), query.page(), query.size(), timeDeposits.count());
+    }
+
+    /**
+     * The loaded entities stay in the persistence context until the transaction ends, together with the {@code
+     * version} each was read at. {@link #saveBalances} relies on that for its optimistic locking.
+     */
+    @Override
+    public List<TimeDeposit> loadAllTimeDeposits() {
+        return timeDeposits.findAll(Sort.by("id")).stream()
+                .map(TimeDepositPersistenceAdapter::toDomain)
+                .toList();
+    }
+
+    /**
+     * Each UPDATE carries {@code WHERE version = <version when loaded>}. If another transaction changed the row in
+     * between, no row matches and the flush throws an {@link org.springframework.dao.OptimisticLockingFailureException}.
+     */
+    @Override
+    public void saveBalances(List<NewBalance> newBalances) {
+        for (NewBalance newBalance : newBalances) {
+            // Found in the persistence context, where loadAllTimeDeposits left it: no query.
+            timeDeposits.findById(newBalance.timeDepositId()).orElseThrow().changeBalance(newBalance.balance());
+        }
+        timeDeposits.flush();
+    }
+
+    private static TimeDeposit toDomain(TimeDepositEntity timeDeposit) {
+        return new TimeDeposit(
+                timeDeposit.getId(),
+                timeDeposit.getPlanType(),
+                timeDeposit.getBalance().doubleValue(),
+                timeDeposit.getDays());
     }
 
     private static TimeDepositView toView(TimeDepositEntity timeDeposit, List<WithdrawalView> withdrawals) {
