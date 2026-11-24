@@ -44,7 +44,7 @@ class HexagonalArchitectureRulesTest {
         assertThat(violations(HexagonalArchitecture.domainDependsOnlyOnTheJdkSlf4jApiAndItself(VIOLATING)))
                 .anySatisfy(violation -> assertThat(violation)
                         .contains("<archfixture.violating.TimeDepositCalculator.count(")
-                        .contains("<archfixture.violating.adapter.persistence.Repository>"));
+                        .contains("<archfixture.violating.adapter.persistence.repository.Repository>"));
     }
 
     @Test
@@ -68,9 +68,9 @@ class HexagonalArchitectureRulesTest {
         assertThat(violations(HexagonalArchitecture.adaptersDoNotDependOnEachOther(VIOLATING)))
                 .anySatisfy(violation -> assertThat(violation)
                         .contains("<archfixture.violating.adapter.web.Controller.repository()>")
-                        .contains("<archfixture.violating.adapter.persistence.Repository>"))
+                        .contains("<archfixture.violating.adapter.persistence.repository.Repository>"))
                 .anySatisfy(violation -> assertThat(violation)
-                        .contains("<archfixture.violating.adapter.persistence.Repository.controller()>")
+                        .contains("<archfixture.violating.adapter.persistence.repository.Repository.controller()>")
                         .contains("<archfixture.violating.adapter.web.Controller>"));
     }
 

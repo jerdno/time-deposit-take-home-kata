@@ -2,7 +2,7 @@
 
 ### Package layout
 
-The code follows a hexagonal layout, and ArchUnit tests (`HexagonalArchitectureTest`) fail `./mvnw verify` when it is broken. The domain is `org.ikigaidigital` itself (`TimeDeposit`, `TimeDepositCalculator`, not its sub-packages) plus `org.ikigaidigital.plantype` (the Plan Types and `PlanTypeResolver`); it depends only on the JDK, the SLF4J API and itself. `org.ikigaidigital.application` holds the use cases, the in- and out-ports and the read model, and may use Spring and the domain but no adapter. `org.ikigaidigital.adapter.web` (generated API interfaces, controller, web infrastructure) and `org.ikigaidigital.adapter.persistence` (JPA entities, repositories, out-port implementations) depend on the application layer and never on each other.
+The code follows a hexagonal layout, and ArchUnit tests (`HexagonalArchitectureTest`) fail `./mvnw verify` when it is broken. The domain is `org.ikigaidigital` itself (`TimeDeposit`, `TimeDepositCalculator`, not its sub-packages) plus `org.ikigaidigital.plantype` (the Plan Types and `PlanTypeResolver`); it depends only on the JDK, the SLF4J API and itself. `org.ikigaidigital.application` holds the use cases, the in- and out-ports and the model they exchange (`application.model`), and may use Spring and the domain but no adapter. `org.ikigaidigital.adapter.web` (generated API interfaces, controller, the Problem Details handler in `web.exception`, web infrastructure) and `org.ikigaidigital.adapter.persistence` (out-port implementations, with the JPA entities in `persistence.entity` and the Spring Data repositories in `persistence.repository`) depend on the application layer and never on each other.
 
 ### Assumptions
 

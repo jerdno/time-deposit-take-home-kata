@@ -1,4 +1,4 @@
-package archfixture.violating.adapter.persistence;
+package archfixture.violating.adapter.persistence.repository;
 
 import archfixture.violating.adapter.web.Controller;
 

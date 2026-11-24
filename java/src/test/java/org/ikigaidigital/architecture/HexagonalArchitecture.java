@@ -16,9 +16,10 @@ import com.tngtech.archunit.lang.ArchRule;
  * <pre>
  * root                       domain: TimeDeposit, TimeDepositCalculator (classes in root itself, not its sub-packages)
  * root.plantype..            domain: Plan Types and PlanTypeResolver
- * root.application..         use cases, ports (in/out), read model, bean wiring
- * root.adapter.web..         generated API, controller, web infrastructure
- * root.adapter.persistence.. JPA entities, repositories, out-port implementations
+ * root.application..         use cases, ports (in/out), the model they exchange (application.model), bean wiring
+ * root.adapter.web..         generated API, controller, Problem Details handler (web.exception), web infrastructure
+ * root.adapter.persistence.. out-port implementations, JPA entities (persistence.entity), Spring Data repositories
+ *                            (persistence.repository)
  * </pre>
  */
 final class HexagonalArchitecture {
@@ -64,7 +65,7 @@ final class HexagonalArchitecture {
 
     /**
      * Each adapter ({@code web}, {@code persistence}, and any added later) stands alone: none depends on another, in
-     * either direction.
+     * either direction. An adapter's sub-packages (such as {@code persistence.entity}) belong to that adapter.
      */
     static ArchRule adaptersDoNotDependOnEachOther(String root) {
         return slices().matching(root + ".adapter.(*)..")

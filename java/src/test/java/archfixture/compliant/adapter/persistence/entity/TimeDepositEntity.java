@@ -1,4 +1,4 @@
-package archfixture.compliant.adapter.persistence;
+package archfixture.compliant.adapter.persistence.entity;
 
 import archfixture.compliant.TimeDeposit;
 import jakarta.persistence.Entity;
