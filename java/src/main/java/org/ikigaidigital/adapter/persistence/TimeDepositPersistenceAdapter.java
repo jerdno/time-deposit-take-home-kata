@@ -29,12 +29,16 @@ class TimeDepositPersistenceAdapter implements LoadTimeDepositPagePort {
     /**
      * Loads a page with a fixed number of queries, however many Time Deposits it holds: one count (for
      * {@code totalItems}), one for the page of Time Deposits and one for all of their Withdrawals together.
+     *
+     * <p>Assumption (ticket 5): "two queries" for a page means no N+1: one for the Time Deposits, one for all their
+     * Withdrawals. The count behind {@code totalItems} is a third query.
      */
     @Override
     public TimeDepositPage loadTimeDepositPage(PageQuery query) {
         long totalItems = timeDeposits.count();
         if (query.offset() >= totalItems) {
-            // Past the last page: nothing to load. Also keeps an offset beyond int range away from the database.
+            // Assumption (ticket 5): a page past the last one is an empty page (200), not an error.
+            // Skipping the queries also keeps an offset beyond int range away from the database.
             return new TimeDepositPage(List.of(), query.page(), query.size(), totalItems);
         }
 
