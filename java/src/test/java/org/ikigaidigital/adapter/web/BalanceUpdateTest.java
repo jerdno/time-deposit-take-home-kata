@@ -1,5 +1,6 @@
 package org.ikigaidigital.adapter.web;
 
+import static java.util.stream.Collectors.toMap;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 
@@ -19,6 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
+import org.springframework.test.web.servlet.assertj.MvcTestResult;
 
 class BalanceUpdateTest extends PostgresIntegrationTest {
 
@@ -48,7 +50,7 @@ class BalanceUpdateTest extends PostgresIntegrationTest {
     void appliesOneMonthlyInterestToEverySeededTimeDeposit() {
         insertSeedData();
 
-        assertThat(mvc.post().uri("/time-deposits/balance-updates")).hasStatus(HttpStatus.NO_CONTENT);
+        assertThat(postBalanceUpdate()).hasStatus(HttpStatus.NO_CONTENT);
 
         // Worked out by hand from the seed: Balance x annual rate / 12, rounded to the cent half-up, inside the
         // Eligibility Window only.
@@ -70,8 +72,8 @@ class BalanceUpdateTest extends PostgresIntegrationTest {
     void eachCallAddsAnotherMonthOfInterest() {
         int id = insertTimeDeposit("basic", "1200.00", 31);
 
-        assertThat(mvc.post().uri("/time-deposits/balance-updates")).hasStatus(HttpStatus.NO_CONTENT);
-        assertThat(mvc.post().uri("/time-deposits/balance-updates")).hasStatus(HttpStatus.NO_CONTENT);
+        assertThat(postBalanceUpdate()).hasStatus(HttpStatus.NO_CONTENT);
+        assertThat(postBalanceUpdate()).hasStatus(HttpStatus.NO_CONTENT);
 
         // 1200.00 + 1.00 = 1201.00, then 1201.00 + 1.0008... rounded = 1202.00
         assertThat(balancesById()).containsExactlyEntriesOf(Map.of(id, new BigDecimal("1202.00")));
@@ -81,7 +83,7 @@ class BalanceUpdateTest extends PostgresIntegrationTest {
     void leavesDaysUnchanged() {
         int id = insertTimeDeposit("premium", "1000.00", 46);
 
-        assertThat(mvc.post().uri("/time-deposits/balance-updates")).hasStatus(HttpStatus.NO_CONTENT);
+        assertThat(postBalanceUpdate()).hasStatus(HttpStatus.NO_CONTENT);
 
         assertThat(jdbc.sql("SELECT days FROM time_deposits WHERE id = ?")
                         .param(id)
@@ -95,7 +97,7 @@ class BalanceUpdateTest extends PostgresIntegrationTest {
         int gold = insertTimeDeposit("gold", "1000.00", 100);
         int basic = insertTimeDeposit("basic", "1200.00", 100);
 
-        assertThat(mvc.post().uri("/time-deposits/balance-updates")).hasStatus(HttpStatus.NO_CONTENT);
+        assertThat(postBalanceUpdate()).hasStatus(HttpStatus.NO_CONTENT);
 
         assertThat(balancesById())
                 .containsExactlyInAnyOrderEntriesOf(
@@ -111,7 +113,7 @@ class BalanceUpdateTest extends PostgresIntegrationTest {
         int basic = insertTimeDeposit("basic", "1200.00", 31);
         int student = insertTimeDeposit("student", "1000.00", 30);
 
-        assertThat(mvc.post().uri("/time-deposits/balance-updates")).hasStatus(HttpStatus.NO_CONTENT);
+        assertThat(postBalanceUpdate()).hasStatus(HttpStatus.NO_CONTENT);
 
         assertThat(logged.list)
                 .filteredOn(event -> event.getLoggerName().endsWith(".BalanceUpdateService"))
@@ -127,6 +129,10 @@ class BalanceUpdateTest extends PostgresIntegrationTest {
                         tuple(Level.INFO, "Balance Update finished, 2 Time Deposits updated"));
     }
 
+    private MvcTestResult postBalanceUpdate() {
+        return mvc.post().uri("/time-deposits/balance-updates").exchange();
+    }
+
     /** Loads the same seed data the local profile does. */
     private void insertSeedData() {
         new ResourceDatabasePopulator(new ClassPathResource("db/seed/R__seed_data.sql")).execute(dataSource);
@@ -138,6 +144,6 @@ class BalanceUpdateTest extends PostgresIntegrationTest {
                 .query((rs, rowNum) -> Map.entry(rs.getInt("id"), rs.getBigDecimal("balance")))
                 .list()
                 .stream()
-                .collect(java.util.stream.Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+                .collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 }
