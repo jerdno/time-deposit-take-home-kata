@@ -1,5 +1,7 @@
 package org.ikigaidigital.application.port.in;
 
+import org.ikigaidigital.application.port.in.exception.ConcurrentBalanceUpdateException;
+
 /** The Balance Update: adds one Monthly Interest to the Balance of every Time Deposit, all or nothing. */
 public interface ApplyBalanceUpdateUseCase {
 

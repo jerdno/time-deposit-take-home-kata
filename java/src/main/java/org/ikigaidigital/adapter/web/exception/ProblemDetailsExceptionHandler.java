@@ -5,7 +5,7 @@ import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Path;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
-import org.ikigaidigital.application.port.in.ConcurrentBalanceUpdateException;
+import org.ikigaidigital.application.port.in.exception.ConcurrentBalanceUpdateException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.ExceptionHandler;

@@ -1,4 +1,4 @@
-package org.ikigaidigital.application.port.in;
+package org.ikigaidigital.application.port.in.exception;
 
 /**
  * Another Balance Update changed a Time Deposit after this one loaded it. This Balance Update was rolled back as a

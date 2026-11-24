@@ -10,7 +10,7 @@ import java.util.Map;
 import org.ikigaidigital.TimeDeposit;
 import org.ikigaidigital.TimeDepositCalculator;
 import org.ikigaidigital.application.port.in.ApplyBalanceUpdateUseCase;
-import org.ikigaidigital.application.port.in.ConcurrentBalanceUpdateException;
+import org.ikigaidigital.application.port.in.exception.ConcurrentBalanceUpdateException;
 import org.ikigaidigital.application.port.out.LoadAllTimeDepositsPort;
 import org.ikigaidigital.application.port.out.SaveBalancesPort;
 import org.ikigaidigital.application.port.out.SaveBalancesPort.NewBalance;
