@@ -12,9 +12,6 @@ public final class PlanTypeResolver {
 
     private static final Logger log = LoggerFactory.getLogger(PlanTypeResolver.class);
 
-    // A HashMap, not Map.copyOf: get(null) must return null, not throw.
-    // Assumption (ticket 4): a null Plan Type is bad data like any unknown value (ERROR log, no interest).
-    // The original calculator threw a NullPointerException for it once Days passed 30.
     private final Map<String, PlanType> planTypesByValue = new HashMap<>();
 
     /** @throws IllegalArgumentException if two Plan Types carry the same value */
@@ -35,10 +32,10 @@ public final class PlanTypeResolver {
     public PlanType resolve(TimeDeposit timeDeposit) {
         String value = timeDeposit.getPlanType();
         PlanType planType = planTypesByValue.get(value);
-        if (planType != null) {
-            return planType;
+        if (planType == null) {
+            log.error("Time Deposit {} has unknown Plan Type '{}'; it earns no interest", timeDeposit.getId(), value);
+            return new UnknownPlanType(value);
         }
-        log.error("Time Deposit {} has unknown Plan Type '{}'; it earns no interest", timeDeposit.getId(), value);
-        return new UnknownPlanType(value);
+        return planType;
     }
 }
