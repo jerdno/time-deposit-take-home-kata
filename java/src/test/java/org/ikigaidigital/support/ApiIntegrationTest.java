@@ -11,7 +11,8 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 
 /**
- * Base class for end-to-end tests: HTTP through MockMvc, a real PostgreSQL started by Testcontainers.
+ * Base class for API tests: HTTP requests through MockMvc against the whole application, backed by a real PostgreSQL
+ * started by Testcontainers.
  *
  * <p>Only the schema migrations run (no {@code local} profile), so every test starts from empty tables and inserts
  * the rows it needs with the helpers below.
@@ -19,7 +20,7 @@ import org.springframework.test.web.servlet.assertj.MockMvcTester;
 @SpringBootTest
 @AutoConfigureMockMvc
 @Import(PostgresTestcontainersConfiguration.class)
-public abstract class PostgresIntegrationTest {
+public abstract class ApiIntegrationTest {
 
     @Autowired
     protected MockMvcTester mvc;

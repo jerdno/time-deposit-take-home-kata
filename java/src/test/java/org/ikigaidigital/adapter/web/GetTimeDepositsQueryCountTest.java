@@ -6,7 +6,7 @@ import jakarta.persistence.EntityManagerFactory;
 import java.time.LocalDate;
 import org.hibernate.SessionFactory;
 import org.hibernate.stat.Statistics;
-import org.ikigaidigital.support.PostgresIntegrationTest;
+import org.ikigaidigital.support.ApiIntegrationTest;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,7 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.test.context.TestPropertySource;
 
 @TestPropertySource(properties = "spring.jpa.properties.hibernate.generate_statistics=true")
-class GetTimeDepositsQueryCountTest extends PostgresIntegrationTest {
+class GetTimeDepositsQueryCountTest extends ApiIntegrationTest {
 
     @Autowired
     EntityManagerFactory entityManagerFactory;

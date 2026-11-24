@@ -3,14 +3,14 @@ package org.ikigaidigital.adapter.web;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.LocalDate;
-import org.ikigaidigital.support.PostgresIntegrationTest;
+import org.ikigaidigital.support.ApiIntegrationTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 
-class GetTimeDepositsTest extends PostgresIntegrationTest {
+class GetTimeDepositsTest extends ApiIntegrationTest {
 
     @Test
     void defaultPageListsTimeDepositsWithoutWithdrawalsAsEmptyList() {

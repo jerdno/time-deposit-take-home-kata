@@ -13,7 +13,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 /**
- * Checks the database as the migrations leave it. Deliberately not a {@code PostgresIntegrationTest}: it must see
+ * Checks the database as the migrations leave it. Deliberately not an {@code ApiIntegrationTest}: it must see
  * the tables before any test inserts or truncates rows, so it does not share that context (and its container).
  */
 @SpringBootTest
