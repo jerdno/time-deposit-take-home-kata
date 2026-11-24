@@ -44,12 +44,21 @@ Open <http://localhost:8080/swagger-ui.html>. It shows the contract as written (
 
 Withdrawals are history only and play no part in interest. Every POST adds another month, so a second POST grows the same Balances again. Of two POSTs that overlap in time, one returns `204` and the other returns `409 Conflict` and applies nothing (see [ADR 0001](docs/adr/0001-optimistic-locking-for-the-balance-update.md)).
 
+To make a retry safe, send an `Idempotency-Key` header with the POST. The first call with a key runs the Balance Update; a later call with the same key returns `204` and adds no interest (see [ADR 0002](docs/adr/0002-idempotency-key-for-the-balance-update.md)).
+
 The same walkthrough with curl:
 
 ```sh
 curl -s http://localhost:8080/time-deposits
 curl -s -i -X POST http://localhost:8080/time-deposits/balance-updates
 curl -s http://localhost:8080/time-deposits
+```
+
+A keyed POST, run twice, adds interest once:
+
+```sh
+curl -s -i -X POST -H 'Idempotency-Key: march-2026' http://localhost:8080/time-deposits/balance-updates
+curl -s -i -X POST -H 'Idempotency-Key: march-2026' http://localhost:8080/time-deposits/balance-updates
 ```
 
 ### Running the tests
@@ -101,6 +110,10 @@ The write-up of how AI was used on this solution (tools, setup, rules and prompt
 - The database lives in a named volume, so Balance Updates survive `docker compose down` and `up`. `docker compose down -v` resets to the seed data. (ticket 9)
 - The AI write-up is ticket 10, which has not landed yet. The README says so instead of linking to a file that does not exist; the link is added when ticket 10 lands. (ticket 9)
 - The original assignment text is kept word for word under `## Assignment`, with its headings one level lower so they nest there. Its title, "Time Deposit Refactoring Kata - Take-Home Assignment", became the README's title, "Time Deposit Refactoring Kata". (ticket 9)
+- `Idempotency-Key` values never expire, and a key is global: not scoped to an endpoint or a client, since only `POST /time-deposits/balance-updates` accepts one. See `docs/adr/0002-idempotency-key-for-the-balance-update.md`. (ticket 11)
+- An `Idempotency-Key` is up to 255 letters, digits and `._:+/=-`, so it is safe to log; any other value gets a `400` and adds no interest. (ticket 11)
+- The IETF Idempotency-Key draft sends the key as a Structured Field string in double quotes, while most clients send it bare. Both forms are accepted and name the same key: `"abc"` and `abc` are one key. (ticket 11)
+- A call that arrives while another call with the same `Idempotency-Key` is still running waits for it. If that one committed, the waiting call is a replay and returns `204`; if it failed, the waiting call runs the Balance Update. The IETF draft suggests answering `409` instead. (ticket 11)
 
 ## Assignment
 

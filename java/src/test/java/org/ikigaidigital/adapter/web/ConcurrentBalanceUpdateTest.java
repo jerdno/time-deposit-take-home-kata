@@ -2,7 +2,6 @@ package org.ikigaidigital.adapter.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.Statement;
 import java.time.Duration;
@@ -100,12 +99,5 @@ class ConcurrentBalanceUpdateTest extends PostgresIntegrationTest {
                         SELECT count(*) FROM pg_stat_activity
                         WHERE wait_event_type = 'Lock' AND query ILIKE 'update time_deposits%'
                         """).query(Long.class).single();
-    }
-
-    private BigDecimal balanceOf(int id) {
-        return jdbc.sql("SELECT balance FROM time_deposits WHERE id = ?")
-                .param(id)
-                .query(BigDecimal.class)
-                .single();
     }
 }

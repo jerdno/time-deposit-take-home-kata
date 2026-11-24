@@ -29,7 +29,8 @@ public abstract class PostgresIntegrationTest {
 
     @BeforeEach
     void emptyTables() {
-        jdbc.sql("TRUNCATE withdrawals, time_deposits RESTART IDENTITY CASCADE").update();
+        jdbc.sql("TRUNCATE withdrawals, time_deposits, idempotency_keys RESTART IDENTITY CASCADE")
+                .update();
     }
 
     /** Inserts a Time Deposit and returns its generated id. */
@@ -45,6 +46,13 @@ public abstract class PostgresIntegrationTest {
         jdbc.sql("INSERT INTO time_deposits (id, plan_type, balance, days) VALUES (?, ?, ?, ?)")
                 .params(id, planType, new BigDecimal(balance), days)
                 .update();
+    }
+
+    protected BigDecimal balanceOf(int timeDepositId) {
+        return jdbc.sql("SELECT balance FROM time_deposits WHERE id = ?")
+                .param(timeDepositId)
+                .query(BigDecimal.class)
+                .single();
     }
 
     /** Inserts a Withdrawal of the given Time Deposit and returns its generated id. */
