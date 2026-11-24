@@ -1,4 +1,4 @@
-package org.ikigaidigital.adapter.web;
+package org.ikigaidigital.adapter.web.exception;
 
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
