@@ -22,28 +22,28 @@ class HexagonalArchitectureRulesTest {
 
     @Test
     void domainRuleReportsATopLevelDomainClassThatDependsOnSpring() {
-        assertThat(violations(HexagonalArchitecture.domainDependsOnlyOnJavaSlf4jAndItself(VIOLATING)))
+        assertThat(violations(HexagonalArchitecture.domainDependsOnlyOnTheJdkSlf4jApiAndItself(VIOLATING)))
                 .anySatisfy(violation -> assertThat(violation)
-                        .contains("<archfixture.violating.Deposit>")
+                        .contains("<archfixture.violating.TimeDeposit>")
                         .contains("<org.springframework.stereotype.Component>"));
     }
 
     @Test
     void domainRuleReportsAPlanTypeThatDependsOnJakartaPersistenceOrWebTypes() {
-        assertThat(violations(HexagonalArchitecture.domainDependsOnlyOnJavaSlf4jAndItself(VIOLATING)))
+        assertThat(violations(HexagonalArchitecture.domainDependsOnlyOnTheJdkSlf4jApiAndItself(VIOLATING)))
                 .anySatisfy(violation -> assertThat(violation)
-                        .contains("<archfixture.violating.plantype.Plan>")
+                        .contains("<archfixture.violating.plantype.BasicPlan>")
                         .contains("<jakarta.persistence.Entity>"))
                 .anySatisfy(violation -> assertThat(violation)
-                        .contains("<archfixture.violating.plantype.Plan.isEligible(")
+                        .contains("<archfixture.violating.plantype.BasicPlan.isEligible(")
                         .contains("<jakarta.servlet.http.HttpServletRequest>"));
     }
 
     @Test
     void domainRuleReportsADomainClassThatDependsOnAnAdapter() {
-        assertThat(violations(HexagonalArchitecture.domainDependsOnlyOnJavaSlf4jAndItself(VIOLATING)))
+        assertThat(violations(HexagonalArchitecture.domainDependsOnlyOnTheJdkSlf4jApiAndItself(VIOLATING)))
                 .anySatisfy(violation -> assertThat(violation)
-                        .contains("<archfixture.violating.Calculator.count(")
+                        .contains("<archfixture.violating.TimeDepositCalculator.count(")
                         .contains("<archfixture.violating.adapter.persistence.Repository>"));
     }
 
@@ -71,7 +71,7 @@ class HexagonalArchitectureRulesTest {
     @Test
     void rulesAcceptALayoutThatKeepsTheBoundaries() {
         assertThat(violations(
-                        HexagonalArchitecture.domainDependsOnlyOnJavaSlf4jAndItself(COMPLIANT), COMPLIANT_CLASSES))
+                        HexagonalArchitecture.domainDependsOnlyOnTheJdkSlf4jApiAndItself(COMPLIANT), COMPLIANT_CLASSES))
                 .isEmpty();
         assertThat(violations(HexagonalArchitecture.applicationDoesNotDependOnAdapters(COMPLIANT), COMPLIANT_CLASSES))
                 .isEmpty();

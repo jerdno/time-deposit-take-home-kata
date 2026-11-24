@@ -16,8 +16,8 @@ class HexagonalArchitectureTest {
             .importPackages(ROOT);
 
     @Test
-    void domainDependsOnlyOnTheJdkTheSlf4jApiAndItself() {
-        HexagonalArchitecture.domainDependsOnlyOnJavaSlf4jAndItself(ROOT).check(PRODUCTION_CLASSES);
+    void domainDependsOnlyOnTheJdkSlf4jApiAndItself() {
+        HexagonalArchitecture.domainDependsOnlyOnTheJdkSlf4jApiAndItself(ROOT).check(PRODUCTION_CLASSES);
     }
 
     @Test

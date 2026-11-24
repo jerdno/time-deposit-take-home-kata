@@ -1,7 +1,7 @@
 package archfixture.compliant.application;
 
-import archfixture.compliant.Deposit;
-import archfixture.compliant.plantype.Plan;
+import archfixture.compliant.TimeDeposit;
+import archfixture.compliant.plantype.BasicPlan;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -10,12 +10,12 @@ import org.springframework.context.annotation.Configuration;
 public class DomainConfiguration {
 
     @Bean
-    Plan plan() {
-        return new Plan();
+    BasicPlan basicPlan() {
+        return new BasicPlan();
     }
 
     @Bean
-    Deposit deposit() {
-        return new Deposit();
+    TimeDeposit timeDeposit() {
+        return new TimeDeposit();
     }
 }

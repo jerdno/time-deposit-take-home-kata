@@ -14,6 +14,6 @@ public class Controller {
     }
 
     public Object get() {
-        return useCase.deposit();
+        return useCase.timeDeposit();
     }
 }

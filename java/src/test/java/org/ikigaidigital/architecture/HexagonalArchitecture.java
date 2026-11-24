@@ -31,7 +31,7 @@ final class HexagonalArchitecture {
      * The domain depends only on the JDK, the SLF4J API and itself: no Spring, no Jakarta Persistence, no web types, no
      * application or adapter packages.
      */
-    static ArchRule domainDependsOnlyOnJavaSlf4jAndItself(String root) {
+    static ArchRule domainDependsOnlyOnTheJdkSlf4jApiAndItself(String root) {
         String plantype = root + ".plantype..";
         return classes()
                 .that()
