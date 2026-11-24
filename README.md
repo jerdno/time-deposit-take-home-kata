@@ -26,7 +26,7 @@ This builds the application image, starts PostgreSQL, waits until it accepts con
 Open <http://localhost:8080/swagger-ui.html>. It shows the contract as written (`java/src/main/resources/openapi.yaml`, also served at <http://localhost:8080/openapi.yaml>) with its two operations. For each step, expand the operation, click **Try it out**, then **Execute**.
 
 1. **`GET /time-deposits`** returns `200` and the first page of Time Deposits (default `size` 20), ordered by `id`: the ten seeded Time Deposits with their Withdrawals, and `totalItems: 10`.
-2. **`POST /time-deposits/balance-updates`** returns `204` with no body. One Monthly Interest was added to the Balance of every Time Deposit, in one transaction.
+2. **`POST /time-deposits/balance-updates`**, with the optional `Idempotency-Key` field left empty, returns `204` with no body. One Monthly Interest was added to the Balance of every Time Deposit, in one transaction.
 3. **`GET /time-deposits`** again. A Time Deposit inside its Plan Type's Eligibility Window grew by one Monthly Interest: the annual rate divided by twelve, applied to the Balance, rounded to the cent. Every other Balance is unchanged, and Days never changes.
 
 | id | Plan Type | Days | Balance before | Balance after | Why |
@@ -42,9 +42,9 @@ Open <http://localhost:8080/swagger-ui.html>. It shows the contract as written (
 | 9 | premium | 45 | 50000.00 | 50000.00 | Premium interest starts after 45 days |
 | 10 | premium | 46 | 50000.00 | 50208.33 | 5% / 12 of 50000.00 is 208.33 |
 
-Withdrawals are history only and play no part in interest. Every POST adds another month, so a second POST grows the same Balances again. Of two POSTs that overlap in time, one returns `204` and the other returns `409 Conflict` and applies nothing (see [ADR 0001](docs/adr/0001-optimistic-locking-for-the-balance-update.md)).
+Withdrawals are history only and play no part in interest. Every POST without an `Idempotency-Key` adds another month, so a second POST grows the same Balances again. Of two POSTs that overlap in time, one returns `204` and the other returns `409 Conflict` and applies nothing (see [ADR 0001](docs/adr/0001-optimistic-locking-for-the-balance-update.md)).
 
-To make a retry safe, send an `Idempotency-Key` header with the POST. The first call with a key runs the Balance Update; a later call with the same key returns `204` and adds no interest (see [ADR 0002](docs/adr/0002-idempotency-key-for-the-balance-update.md)).
+To make a retry safe, send an `Idempotency-Key` header with the POST. The first call with a key runs the Balance Update; a later call with the same key returns `204` and adds no interest (see [ADR 0002](docs/adr/0002-idempotency-key-for-the-balance-update.md)). To try it in Swagger UI, type a value such as `april-2026` into the `Idempotency-Key` field and click **Execute** twice: both return `204`, and `GET /time-deposits` shows that only the first one added interest. Keys never expire and are kept in the `postgres-data` volume, so pick a value you have not used yet, or start from the seed data with `docker compose down -v`.
 
 The same walkthrough with curl:
 
