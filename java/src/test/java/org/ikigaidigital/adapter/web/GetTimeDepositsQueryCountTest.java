@@ -21,7 +21,7 @@ class GetTimeDepositsQueryCountTest extends PostgresIntegrationTest {
 
     @ParameterizedTest(name = "{0} Time Deposits")
     @ValueSource(ints = {1, 3, 50})
-    void aPageLoadsWithThreeQueriesHoweverManyTimeDepositsItHolds(int timeDepositCount) {
+    void aPageLoadsWithTwoQueriesHoweverManyTimeDepositsItHolds(int timeDepositCount) {
         for (int i = 0; i < timeDepositCount; i++) {
             int id = insertTimeDeposit("basic", "1000.00", 100);
             insertWithdrawal(id, "10.00", LocalDate.of(2026, 1, 15));
@@ -37,7 +37,7 @@ class GetTimeDepositsQueryCountTest extends PostgresIntegrationTest {
                 .extractingPath("$.items.length()")
                 .isEqualTo(timeDepositCount);
 
-        // One count for totalItems, one for the page of Time Deposits, one for all of their Withdrawals.
-        assertThat(statistics.getPrepareStatementCount()).isEqualTo(3);
+        // One for the page of Time Deposits (with the total count), one for all of their Withdrawals.
+        assertThat(statistics.getPrepareStatementCount()).isEqualTo(2);
     }
 }
