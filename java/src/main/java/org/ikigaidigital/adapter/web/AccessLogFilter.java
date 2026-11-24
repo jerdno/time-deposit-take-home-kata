@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
@@ -24,11 +25,13 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * (see {@code logging.pattern.correlation}). Request and response bodies are never logged.
  */
 @Component
-@Order(Ordered.HIGHEST_PRECEDENCE)
+// Right after Spring Boot's CharacterEncodingFilter (HIGHEST_PRECEDENCE), before every other filter, so their log
+// lines carry the request id too.
+@Order(Ordered.HIGHEST_PRECEDENCE + 1)
 class AccessLogFilter extends OncePerRequestFilter {
 
-    static final String REQUEST_ID_HEADER = "X-Request-Id";
-    static final String REQUEST_ID_MDC_KEY = "requestId";
+    private static final String REQUEST_ID_HEADER = "X-Request-Id";
+    private static final String REQUEST_ID_MDC_KEY = "requestId";
 
     // Assumption (ticket 6): the incoming id is client input that lands in every log line and in a response header.
     // Only up to 128 characters of letters, digits and . _ : + / = - are reused (enough for UUIDs and the usual
@@ -38,15 +41,22 @@ class AccessLogFilter extends OncePerRequestFilter {
     // Assumption (ticket 6): Swagger UI (springdoc's default paths), springdoc's api-docs and the contract that Swagger
     // UI shows (/openapi.yaml) are skipped entirely: no access log lines and no request id. Every other request is
     // logged, including one to an unknown path.
-    private static final List<String> SWAGGER_PATH_PREFIXES = List.of("/swagger-ui", "/v3/api-docs", "/openapi.yaml");
+    private static final Set<String> API_DOCUMENTATION_FILES =
+            Set.of("/swagger-ui.html", "/openapi.yaml", "/v3/api-docs", "/v3/api-docs.yaml");
+    private static final List<String> API_DOCUMENTATION_DIRECTORIES = List.of("/swagger-ui/", "/v3/api-docs/");
 
     private static final Logger log = LoggerFactory.getLogger(AccessLogFilter.class);
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI().substring(request.getContextPath().length());
-        return SWAGGER_PATH_PREFIXES.stream().anyMatch(path::startsWith);
+        return API_DOCUMENTATION_FILES.contains(path)
+                || API_DOCUMENTATION_DIRECTORIES.stream().anyMatch(path::startsWith);
     }
+
+    // No endpoint is asynchronous. If one ever is (Callable, DeferredResult, ...), the end line would be written when
+    // the first dispatch returns, and the async dispatch would run without the request id: OncePerRequestFilter skips
+    // async dispatches by default.
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
@@ -55,15 +65,19 @@ class AccessLogFilter extends OncePerRequestFilter {
         response.setHeader(REQUEST_ID_HEADER, requestId);
         MDC.put(REQUEST_ID_MDC_KEY, requestId);
         long start = System.nanoTime();
-        // Assumption (ticket 6): an exception that escapes the chain has set no status; the servlet container answers
-        // it with a 500, so that is the status the end line reports.
-        int status = HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
+        boolean completed = false;
         try {
             String query = request.getQueryString();
             log.info("Started {} {}{}", request.getMethod(), request.getRequestURI(), query == null ? "" : "?" + query);
             chain.doFilter(request, response);
-            status = response.getStatus();
+            completed = true;
         } finally {
+            // Assumption (ticket 6): an exception that escapes the chain before the response is committed has set no
+            // status; the servlet container answers it with a 500, so that is the status the end line reports. A
+            // committed response keeps the status already sent.
+            int status = completed || response.isCommitted()
+                    ? response.getStatus()
+                    : HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
             long durationMs = (System.nanoTime() - start) / 1_000_000;
             log.info(
                     "Finished {} {} status={} durationMs={}",
