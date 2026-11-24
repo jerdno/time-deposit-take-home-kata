@@ -11,7 +11,7 @@
 - `days` is stored as-is; the application never advances it. (ticket 5)
 - `created_at` is when the row was inserted, not when the Time Deposit was opened. (ticket 5)
 - Tables and columns use PostgreSQL's snake_case (`time_deposits.plan_type`, `withdrawals.time_deposit_id`) for the README's `timeDeposits.planType` and `withdrawals.timeDepositId`. The API keeps the README's camelCase names. (ticket 5)
-- "Two queries" per page means no N+1: one for the page of Time Deposits, one for all of their Withdrawals. The count behind `totalItems` is a third query. (ticket 5)
+- `planType` is stored and returned as a plain string: no CHECK constraint in the database and no enum in the contract. A Time Deposit with an unknown Plan Type is bad data the application must survive and still list, not reject. (ticket 5)
 - A page past the last one returns `200` with an empty `items` list, not an error. (ticket 5)
 - A Time Deposit's Withdrawals are listed by `id` ascending (the order they were recorded); the README does not specify an order. (ticket 5)
 
