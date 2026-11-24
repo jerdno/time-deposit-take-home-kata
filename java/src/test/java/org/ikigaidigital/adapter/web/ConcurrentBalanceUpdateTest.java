@@ -58,9 +58,9 @@ class ConcurrentBalanceUpdateTest extends ApiIntegrationTest {
     }
 
     /**
-     * Makes the race deterministic. A SHARE lock on the table lets both Balance Updates read every Time Deposit but
-     * blocks their UPDATEs. Once both are waiting on it, both have loaded the same versions; then the lock is released
-     * and they race to save.
+     * Makes the race deterministic. A SHARE lock on the table lets both Balance Updates load every Time Deposit and find
+     * it again in their save transactions, but blocks their UPDATEs. Once both are waiting on it, both have passed
+     * their version check with the same versions; then the lock is released and they race to save.
      */
     private List<MvcTestResult> runTwoBalanceUpdatesThatBothLoadBeforeEitherSaves() throws Exception {
         ExecutorService executor = Executors.newFixedThreadPool(2);
