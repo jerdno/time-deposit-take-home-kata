@@ -5,11 +5,11 @@ import org.ikigaidigital.adapter.web.api.TimeDepositsApi;
 import org.ikigaidigital.adapter.web.api.model.TimeDepositDto;
 import org.ikigaidigital.adapter.web.api.model.TimeDepositPageDto;
 import org.ikigaidigital.adapter.web.api.model.WithdrawalDto;
+import org.ikigaidigital.application.model.PageQuery;
+import org.ikigaidigital.application.model.TimeDepositPage;
+import org.ikigaidigital.application.model.TimeDepositView;
+import org.ikigaidigital.application.model.WithdrawalView;
 import org.ikigaidigital.application.port.in.GetTimeDepositsUseCase;
-import org.ikigaidigital.application.readmodel.PageQuery;
-import org.ikigaidigital.application.readmodel.TimeDepositPage;
-import org.ikigaidigital.application.readmodel.TimeDepositView;
-import org.ikigaidigital.application.readmodel.WithdrawalView;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 

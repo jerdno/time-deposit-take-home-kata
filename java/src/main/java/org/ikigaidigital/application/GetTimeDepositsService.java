@@ -1,9 +1,9 @@
 package org.ikigaidigital.application;
 
+import org.ikigaidigital.application.model.PageQuery;
+import org.ikigaidigital.application.model.TimeDepositPage;
 import org.ikigaidigital.application.port.in.GetTimeDepositsUseCase;
 import org.ikigaidigital.application.port.out.LoadTimeDepositPagePort;
-import org.ikigaidigital.application.readmodel.PageQuery;
-import org.ikigaidigital.application.readmodel.TimeDepositPage;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

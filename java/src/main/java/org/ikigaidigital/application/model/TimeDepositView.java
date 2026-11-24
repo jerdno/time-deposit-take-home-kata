@@ -1,4 +1,4 @@
-package org.ikigaidigital.application.readmodel;
+package org.ikigaidigital.application.model;
 
 import java.math.BigDecimal;
 import java.util.List;

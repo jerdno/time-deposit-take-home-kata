@@ -7,11 +7,11 @@ import static java.util.stream.Collectors.toList;
 import java.util.List;
 import java.util.Map;
 import org.ikigaidigital.adapter.persistence.TimeDepositJpaRepository.TimeDepositWithTotal;
+import org.ikigaidigital.application.model.PageQuery;
+import org.ikigaidigital.application.model.TimeDepositPage;
+import org.ikigaidigital.application.model.TimeDepositView;
+import org.ikigaidigital.application.model.WithdrawalView;
 import org.ikigaidigital.application.port.out.LoadTimeDepositPagePort;
-import org.ikigaidigital.application.readmodel.PageQuery;
-import org.ikigaidigital.application.readmodel.TimeDepositPage;
-import org.ikigaidigital.application.readmodel.TimeDepositView;
-import org.ikigaidigital.application.readmodel.WithdrawalView;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 

@@ -1,4 +1,4 @@
-package org.ikigaidigital.application.readmodel;
+package org.ikigaidigital.application.model;
 
 /**
  * Which page of Time Deposits to load.
