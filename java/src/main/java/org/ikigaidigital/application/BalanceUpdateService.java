@@ -36,6 +36,8 @@ class BalanceUpdateService implements ApplyBalanceUpdateUseCase {
     }
 
     // One transaction: every Balance is saved, or none is.
+    // Assumption (ticket 7): every call adds a month of interest. Triggering it once a month is the caller's job
+    // (e.g. an external scheduler); retry safety is ticket 11.
     @Override
     @Transactional
     public void applyBalanceUpdate() {
@@ -63,8 +65,9 @@ class BalanceUpdateService implements ApplyBalanceUpdateUseCase {
         try {
             saveBalancesPort.saveBalances(newBalances);
         } catch (OptimisticLockingFailureException e) {
-            // Optimistic locking, not row locks (docs/adr/0001-optimistic-locking-for-the-balance-update.md): the loser
-            // rolls back and its caller learns so.
+            // Assumption (ticket 7): no row locks. Optimistic locking makes concurrent calls deterministic: each 204
+            // means exactly one month of interest was applied, and the loser rolls back as a whole
+            // (docs/adr/0001-optimistic-locking-for-the-balance-update.md).
             throw new ConcurrentBalanceUpdateException(e);
         }
         // Assumption (ticket 7): N counts every Time Deposit the Balance Update went through, including those that
