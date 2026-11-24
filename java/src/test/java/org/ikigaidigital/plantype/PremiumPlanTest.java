@@ -8,15 +8,17 @@ import org.junit.jupiter.api.Test;
 
 class PremiumPlanTest {
 
+    private static final String PLAN_TYPE = "premium";
+
     private final PremiumPlan premiumPlan = new PremiumPlan();
 
     private static TimeDeposit timeDeposit(double balance, int days) {
-        return new TimeDeposit(1, "premium", balance, days);
+        return new TimeDeposit(1, PLAN_TYPE, balance, days);
     }
 
     @Test
     void isCarriedAsPremium() {
-        assertThat(premiumPlan.planType()).isEqualTo("premium");
+        assertThat(premiumPlan.planType()).isEqualTo(PLAN_TYPE);
     }
 
     @Test

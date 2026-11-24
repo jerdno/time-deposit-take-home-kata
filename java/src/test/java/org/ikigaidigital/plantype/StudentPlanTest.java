@@ -8,15 +8,17 @@ import org.junit.jupiter.api.Test;
 
 class StudentPlanTest {
 
+    private static final String PLAN_TYPE = "student";
+
     private final StudentPlan studentPlan = new StudentPlan();
 
     private static TimeDeposit timeDeposit(double balance, int days) {
-        return new TimeDeposit(1, "student", balance, days);
+        return new TimeDeposit(1, PLAN_TYPE, balance, days);
     }
 
     @Test
     void isCarriedAsStudent() {
-        assertThat(studentPlan.planType()).isEqualTo("student");
+        assertThat(studentPlan.planType()).isEqualTo(PLAN_TYPE);
     }
 
     @Test
