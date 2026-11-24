@@ -1,0 +1,38 @@
+# Runs PostgreSQL and the application with the local profile, which applies the migrations and the seed data on
+# startup. See "How to run" in the README.
+services:
+  postgres:
+    # The same image as the Testcontainers tests. Flyway warns that PostgreSQL 19 is newer than it has verified.
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: time_deposits
+      POSTGRES_USER: time_deposits
+      POSTGRES_PASSWORD: time_deposits
+    healthcheck:
+      # Over TCP on purpose: while the image initialises the database, its temporary server listens on the Unix
+      # socket only, so a socket check could pass before the real server is up.
+      test: ["CMD", "pg_isready", "--host=localhost", "--username=time_deposits", "--dbname=time_deposits"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+    # Assumption (ticket 9): no host port. The walkthrough only needs the API, and a published 5432 would clash with a
+    # PostgreSQL already running on the host. Use `docker compose exec postgres psql -U time_deposits` to reach it.
+    volumes:
+      # Assumption (ticket 9): a named volume, so Balance Updates survive `docker compose down` and `up`.
+      # `docker compose down -v` resets the database to the seed data.
+      # PostgreSQL 18 images keep their data under /var/lib/postgresql/18/docker, so the volume mounts the parent.
+      - postgres-data:/var/lib/postgresql
+
+  app:
+    build: ./java
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/time_deposits
+    ports:
+      - "8080:8080"
+
+volumes:
+  postgres-data:
