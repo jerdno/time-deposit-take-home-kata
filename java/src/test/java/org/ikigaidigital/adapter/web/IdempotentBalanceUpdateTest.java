@@ -7,7 +7,6 @@ import java.util.Map;
 import org.ikigaidigital.support.ApiIntegrationTest;
 import org.ikigaidigital.support.FailingTimeDepositUpdates;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -18,13 +17,6 @@ import org.springframework.test.web.servlet.assertj.MvcTestResult;
 class IdempotentBalanceUpdateTest extends ApiIntegrationTest {
 
     private static final String KEY = "8e03978e-40d5-43e8-bc93-6894a57f9324";
-
-    private FailingTimeDepositUpdates failingUpdates;
-
-    @BeforeEach
-    void prepareFailingUpdates() {
-        failingUpdates = new FailingTimeDepositUpdates(jdbc);
-    }
 
     @Test
     void withoutAKeyEveryCallAddsInterest() {
@@ -83,12 +75,12 @@ class IdempotentBalanceUpdateTest extends ApiIntegrationTest {
     @Test
     void aFailedCallWithAKeyStoresNoKeySoItsRetryAddsInterestOnce() {
         int id = insertTimeDeposit("basic", "1200.00", 31);
-        failingUpdates.failWhen("true");
+        FailingTimeDepositUpdates.failWhen(jdbc, "true");
 
         assertThat(postBalanceUpdate(KEY)).hasStatus(HttpStatus.INTERNAL_SERVER_ERROR);
         assertThat(balancesById()).containsExactlyEntriesOf(Map.of(id, new BigDecimal("1200.00")));
 
-        failingUpdates.remove();
+        FailingTimeDepositUpdates.remove(jdbc);
         assertThat(postBalanceUpdate(KEY)).hasStatus(HttpStatus.NO_CONTENT);
         assertThat(postBalanceUpdate(KEY)).hasStatus(HttpStatus.NO_CONTENT);
 
@@ -97,7 +89,7 @@ class IdempotentBalanceUpdateTest extends ApiIntegrationTest {
 
     @AfterEach
     void removeFailingUpdates() {
-        failingUpdates.remove();
+        FailingTimeDepositUpdates.remove(jdbc);
         jdbc.sql("DROP SEQUENCE IF EXISTS fail_balance_update_once").update();
     }
 

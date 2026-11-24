@@ -8,17 +8,13 @@ import org.springframework.jdbc.core.simple.JdbcClient;
  */
 public final class FailingTimeDepositUpdates {
 
-    private final JdbcClient jdbc;
-
-    public FailingTimeDepositUpdates(JdbcClient jdbc) {
-        this.jdbc = jdbc;
-    }
+    private FailingTimeDepositUpdates() {}
 
     /**
      * @param condition a PL/pgSQL boolean expression, evaluated for each updated row; {@code OLD} is the row before
      *     the UPDATE (e.g. {@code "OLD.id = 3"})
      */
-    public void failWhen(String condition) {
+    public static void failWhen(JdbcClient jdbc, String condition) {
         jdbc.sql("""
                         CREATE FUNCTION fail_balance_update() RETURNS trigger LANGUAGE plpgsql AS $$
                         BEGIN
@@ -34,7 +30,7 @@ public final class FailingTimeDepositUpdates {
                 .update();
     }
 
-    public void remove() {
+    public static void remove(JdbcClient jdbc) {
         jdbc.sql("DROP TRIGGER IF EXISTS fail_balance_update ON time_deposits").update();
         jdbc.sql("DROP FUNCTION IF EXISTS fail_balance_update()").update();
     }
