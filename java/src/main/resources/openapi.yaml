@@ -93,7 +93,8 @@ components:
           format: int32
           example: 1
         planType:
-          # A plain string, not an enum: a Time Deposit with an unknown Plan Type is bad data the API still returns.
+          # Assumption (ticket 5): a plain string, not an enum. A Time Deposit with an unknown Plan Type is bad data
+          # the API still returns.
           type: string
           description: |
             The Plan Type of the Time Deposit. Known values: `basic`, `student`, `premium`.
