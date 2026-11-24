@@ -11,6 +11,7 @@ import org.ikigaidigital.application.model.TimeDepositView;
 import org.ikigaidigital.application.model.WithdrawalView;
 import org.ikigaidigital.application.port.in.ApplyBalanceUpdateUseCase;
 import org.ikigaidigital.application.port.in.GetTimeDepositsUseCase;
+import org.jspecify.annotations.Nullable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -20,10 +21,15 @@ class TimeDepositsController implements TimeDepositsApi {
 
     private final GetTimeDepositsUseCase getTimeDeposits;
     private final ApplyBalanceUpdateUseCase applyBalanceUpdate;
+    private final IdempotentRequests idempotentRequests;
 
-    TimeDepositsController(GetTimeDepositsUseCase getTimeDeposits, ApplyBalanceUpdateUseCase applyBalanceUpdate) {
+    TimeDepositsController(
+            GetTimeDepositsUseCase getTimeDeposits,
+            ApplyBalanceUpdateUseCase applyBalanceUpdate,
+            IdempotentRequests idempotentRequests) {
         this.getTimeDeposits = getTimeDeposits;
         this.applyBalanceUpdate = applyBalanceUpdate;
+        this.idempotentRequests = idempotentRequests;
     }
 
     @Override
@@ -38,8 +44,8 @@ class TimeDepositsController implements TimeDepositsApi {
     }
 
     @Override
-    public ResponseEntity<Void> applyBalanceUpdate() {
-        applyBalanceUpdate.applyBalanceUpdate();
+    public ResponseEntity<Void> applyBalanceUpdate(@Nullable String idempotencyKey) {
+        idempotentRequests.run(idempotencyKey, applyBalanceUpdate::applyBalanceUpdate);
         return ResponseEntity.noContent().build();
     }
 
