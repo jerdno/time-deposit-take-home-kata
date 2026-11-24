@@ -1,8 +1,8 @@
 # Time Deposit Refactoring Kata
 
-A REST API over XA Bank's Time Deposits: list them, and run a Balance Update that adds one Monthly Interest to every Time Deposit. Spring Boot 4 on Java 25, PostgreSQL, a contract-first OpenAPI definition and a hexagonal layout. The original assignment is [below](#assignment); the domain terms are defined in [`GLOSSARY.md`](GLOSSARY.md).
-
 ## Solution
+
+A REST API over XA Bank's Time Deposits: list them, and run a Balance Update that adds one Monthly Interest to every Time Deposit. Spring Boot 4 on Java 25, PostgreSQL, a contract-first OpenAPI definition and a hexagonal layout. The original assignment is [below](#assignment); the domain terms are defined in [`GLOSSARY.md`](GLOSSARY.md).
 
 ### Prerequisites
 
@@ -19,7 +19,7 @@ docker compose up --build
 This builds the application image, starts PostgreSQL, waits until it accepts connections, then starts the application with the `local` profile. On startup Flyway creates the schema and loads ten seeded Time Deposits. The first build downloads Maven and the dependencies, which takes a few minutes. The API is ready when the log shows `Started TimeDepositApplication`.
 
 - To stop, press `Ctrl+C` or run `docker compose down`. The data stays in the `postgres-data` volume, so Balance Updates survive a restart.
-- To start again from the seed data, run `docker compose down -v`, then `docker compose up`.
+- To start again from the seed data, run `docker compose down -v`, then `docker compose up --build`.
 
 ### Trying the endpoints in Swagger UI
 
@@ -101,6 +101,7 @@ The write-up of how AI was used on this solution (tools, setup, rules and prompt
 - PostgreSQL is not published on a host port. The walkthrough only needs the API, and a published 5432 would clash with a PostgreSQL already running on the host. `docker compose exec postgres psql -U time_deposits` reaches it when needed. (ticket 9)
 - The database lives in a named volume, so Balance Updates survive `docker compose down` and `up`. `docker compose down -v` resets to the seed data. (ticket 9)
 - The AI write-up is ticket 10, which has not landed yet. The README says so instead of linking to a file that does not exist; the link is added when ticket 10 lands. (ticket 9)
+- The original assignment text is kept word for word under `## Assignment`, with its headings one level lower so they nest there. Its title, "Time Deposit Refactoring Kata - Take-Home Assignment", became the README's title, "Time Deposit Refactoring Kata". (ticket 9)
 
 ## Assignment
 
