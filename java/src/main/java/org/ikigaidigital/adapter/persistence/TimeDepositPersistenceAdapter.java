@@ -6,13 +6,13 @@ import static java.util.stream.Collectors.toList;
 
 import java.util.List;
 import java.util.Map;
+import org.ikigaidigital.adapter.persistence.TimeDepositJpaRepository.TimeDepositWithTotal;
 import org.ikigaidigital.application.port.out.LoadTimeDepositPagePort;
 import org.ikigaidigital.application.readmodel.PageQuery;
 import org.ikigaidigital.application.readmodel.TimeDepositPage;
 import org.ikigaidigital.application.readmodel.TimeDepositView;
 import org.ikigaidigital.application.readmodel.WithdrawalView;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -27,23 +27,22 @@ class TimeDepositPersistenceAdapter implements LoadTimeDepositPagePort {
     }
 
     /**
-     * Loads a page with a fixed number of queries, however many Time Deposits it holds: one count (for
-     * {@code totalItems}), one for the page of Time Deposits and one for all of their Withdrawals together.
-     *
-     * <p>Assumption (ticket 5): "two queries" for a page means no N+1: one for the Time Deposits, one for all their
-     * Withdrawals. The count behind {@code totalItems} is a third query.
+     * Loads a page with two queries, however many Time Deposits it holds: one for the page of Time Deposits (which
+     * also counts them all, for {@code totalItems}) and one for all of their Withdrawals together.
      */
     @Override
     public TimeDepositPage loadTimeDepositPage(PageQuery query) {
-        long totalItems = timeDeposits.count();
-        if (query.offset() >= totalItems) {
-            // Assumption (ticket 5): a page past the last one is an empty page (200), not an error.
-            // Skipping the queries also keeps an offset beyond int range away from the database.
-            return new TimeDepositPage(List.of(), query.page(), query.size(), totalItems);
+        if (query.offset() > Integer.MAX_VALUE) {
+            // JPA takes the offset as an int; a page this far out can only be past the last one.
+            return emptyPage(query);
+        }
+        List<TimeDepositWithTotal> rows = timeDeposits.findPageWithTotal(PageRequest.of(query.page(), query.size()));
+        if (rows.isEmpty()) {
+            return emptyPage(query);
         }
 
         List<TimeDepositEntity> page =
-                timeDeposits.findAllBy(PageRequest.of(query.page(), query.size(), Sort.by("id")));
+                rows.stream().map(TimeDepositWithTotal::timeDeposit).toList();
         Map<Integer, List<WithdrawalView>> withdrawalsByTimeDepositId =
                 withdrawals
                         .findByTimeDepositIdInOrderByIdAsc(
@@ -57,7 +56,14 @@ class TimeDepositPersistenceAdapter implements LoadTimeDepositPagePort {
                 .map(timeDeposit ->
                         toView(timeDeposit, withdrawalsByTimeDepositId.getOrDefault(timeDeposit.getId(), List.of())))
                 .toList();
-        return new TimeDepositPage(items, query.page(), query.size(), totalItems);
+        return new TimeDepositPage(
+                items, query.page(), query.size(), rows.getFirst().totalItems());
+    }
+
+    // Assumption (ticket 5): a page past the last one is an empty page (200), not an error. The page query returned no
+    // row to carry the total, so it is counted separately.
+    private TimeDepositPage emptyPage(PageQuery query) {
+        return new TimeDepositPage(List.of(), query.page(), query.size(), timeDeposits.count());
     }
 
     private static TimeDepositView toView(TimeDepositEntity timeDeposit, List<WithdrawalView> withdrawals) {

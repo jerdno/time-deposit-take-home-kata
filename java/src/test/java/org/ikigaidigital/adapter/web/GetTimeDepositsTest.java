@@ -67,16 +67,17 @@ class GetTimeDepositsTest extends PostgresIntegrationTest {
                 .containsExactly(10, 20, 30);
     }
 
-    @Test
-    void pageAfterTheLastOneIsEmpty() {
+    @ParameterizedTest
+    @ValueSource(ints = {1, Integer.MAX_VALUE})
+    void pageAfterTheLastOneIsEmpty(int page) {
         insertTimeDeposit("basic", "100.00", 10);
 
-        assertThat(mvc.get().uri("/time-deposits?page=1"))
+        assertThat(mvc.get().uri("/time-deposits?page=" + page))
                 .hasStatus(HttpStatus.OK)
                 .bodyJson()
                 .isLenientlyEqualTo("""
-                        { "items": [], "page": 1, "size": 20, "totalItems": 1, "totalPages": 1 }
-                        """);
+                        { "items": [], "page": %d, "size": 20, "totalItems": 1, "totalPages": 1 }
+                        """.formatted(page));
     }
 
     @Test
