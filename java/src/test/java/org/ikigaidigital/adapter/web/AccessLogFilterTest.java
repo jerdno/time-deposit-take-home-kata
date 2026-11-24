@@ -23,9 +23,7 @@ class AccessLogFilterTest extends PostgresIntegrationTest {
         MvcTestResult result = mvc.get().uri("/time-deposits").exchange();
 
         assertThat(result).hasStatus(HttpStatus.OK);
-        String requestId = result.getResponse().getHeader("X-Request-Id");
-        assertThat(requestId).isNotNull();
-        assertThat(UUID.fromString(requestId)).hasToString(requestId);
+        assertIsAGeneratedId(result.getResponse().getHeader("X-Request-Id"));
     }
 
     @Test
@@ -67,9 +65,10 @@ class AccessLogFilterTest extends PostgresIntegrationTest {
                 "/swagger-ui.html",
                 "/v3/api-docs",
                 "/v3/api-docs/swagger-config",
+                "/v3/api-docs.yaml",
                 "/openapi.yaml"
             })
-    void doesNotLogSwaggerAssets(String path, CapturedOutput output) {
+    void doesNotLogApiDocumentationRequests(String path, CapturedOutput output) {
         MvcTestResult result = mvc.get().uri(path).exchange();
 
         assertThat(result.getResponse().getStatus()).isLessThan(400);
@@ -91,8 +90,7 @@ class AccessLogFilterTest extends PostgresIntegrationTest {
         MvcTestResult result =
                 mvc.get().uri("/time-deposits").header("X-Request-Id", incoming).exchange();
 
-        String requestId = result.getResponse().getHeader("X-Request-Id");
-        assertThat(UUID.fromString(requestId)).hasToString(requestId);
+        assertIsAGeneratedId(result.getResponse().getHeader("X-Request-Id"));
     }
 
     @Test
@@ -105,5 +103,18 @@ class AccessLogFilterTest extends PostgresIntegrationTest {
         assertThat(result.getResponse().getHeader("X-Request-Id")).isNotEqualTo(overlong);
         assertThat(mvc.get().uri("/time-deposits").header("X-Request-Id", "a".repeat(128)))
                 .hasHeader("X-Request-Id", "a".repeat(128));
+    }
+
+    @Test
+    void logsAPathThatOnlyStartsLikeTheApiDocumentation(CapturedOutput output) {
+        mvc.get().uri("/openapi.yaml.bak").header("X-Request-Id", "lookalike").exchange();
+
+        assertThat(output.getOut().lines().filter(line -> line.contains("[lookalike]")))
+                .anySatisfy(line -> assertThat(line).endsWith("Started GET /openapi.yaml.bak"));
+    }
+
+    private static void assertIsAGeneratedId(String requestId) {
+        assertThat(requestId).isNotNull();
+        assertThat(UUID.fromString(requestId)).hasToString(requestId);
     }
 }

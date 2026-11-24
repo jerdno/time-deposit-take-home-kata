@@ -3,6 +3,7 @@ package org.ikigaidigital.adapter.web;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.MDC;
@@ -30,5 +31,19 @@ class AccessLogFilterFailureTest {
         // Matches the message only: without a Spring context, the log pattern is Logback's default one.
         assertThat(output.getOut()).containsPattern("Finished GET /time-deposits status=500 durationMs=\\d+\\R");
         assertThat(MDC.getCopyOfContextMap()).isNullOrEmpty();
+    }
+
+    @Test
+    void logsTheStatusAlreadySentWhenTheHandlerThrowsAfterCommittingTheResponse(CapturedOutput output) {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/time-deposits");
+
+        assertThatThrownBy(() -> new AccessLogFilter().doFilter(request, new MockHttpServletResponse(), (req, res) -> {
+                    ((HttpServletResponse) res).setStatus(HttpServletResponse.SC_OK);
+                    res.flushBuffer();
+                    throw new IllegalStateException("connection reset while writing");
+                }))
+                .isInstanceOf(IllegalStateException.class);
+
+        assertThat(output.getOut()).containsPattern("Finished GET /time-deposits status=200 durationMs=\\d+\\R");
     }
 }
