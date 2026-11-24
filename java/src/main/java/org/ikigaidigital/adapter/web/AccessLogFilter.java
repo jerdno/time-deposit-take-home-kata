@@ -5,6 +5,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.List;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,6 +23,15 @@ class AccessLogFilter extends OncePerRequestFilter {
     static final String REQUEST_ID_MDC_KEY = "requestId";
 
     private static final Logger log = LoggerFactory.getLogger(AccessLogFilter.class);
+
+    // Swagger UI (springdoc's default paths) and the contract it shows, served as a static file.
+    private static final List<String> SWAGGER_PATH_PREFIXES = List.of("/swagger-ui", "/v3/api-docs", "/openapi.yaml");
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getRequestURI().substring(request.getContextPath().length());
+        return SWAGGER_PATH_PREFIXES.stream().anyMatch(path::startsWith);
+    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
