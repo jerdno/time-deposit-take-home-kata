@@ -50,8 +50,6 @@ class ProblemDetailsExceptionHandler extends ResponseEntityExceptionHandler {
      * line carries the request's trace id; an exception that escaped to the servlet container would be logged after
      * the trace had ended.
      */
-    // Assumption (ticket 6): an unexpected error answers 500 with a generic detail. The exception message can hold
-    // internals (SQL, table names), so it goes to the log only.
     @ExceptionHandler(Exception.class)
     ProblemDetail handleUnexpected(Exception exception) {
         log.error("Request failed with an unexpected error", exception);
