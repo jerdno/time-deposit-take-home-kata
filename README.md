@@ -1,14 +1,19 @@
 # Time Deposit Refactoring Kata
 
-## Solution
+A REST API over XA Bank's Time Deposits. It lists them, and it runs a Balance Update that adds one Monthly Interest to every Time Deposit. It is built with Spring Boot 4 on Java 25 and PostgreSQL, from a contract-first OpenAPI definition, in a hexagonal layout. [`GLOSSARY.md`](GLOSSARY.md) defines the domain terms.
 
-A REST API over XA Bank's Time Deposits: list them, and run a Balance Update that adds one Monthly Interest to every Time Deposit. Spring Boot 4 on Java 25, PostgreSQL, a contract-first OpenAPI definition and a hexagonal layout. The original assignment is [below](#assignment); the domain terms are defined in [`GLOSSARY.md`](GLOSSARY.md).
+For a review, in this order:
 
-### Prerequisites
+1. [Run the service](#run-the-service) with one `docker compose` command.
+2. [Try the two endpoints in Swagger UI](#try-the-endpoints-in-swagger-ui).
+3. Read the [decisions and assumptions](#decisions-and-assumptions) I made where the assignment left room.
+4. Read how I built the solution with an [AI coding agent](#ai-assisted-development).
 
-Docker with Docker Compose v2 (Docker Desktop includes both). Nothing else: the application image is built inside Docker, so no JDK or Maven is needed. Port 8080 must be free.
+The original assignment is in the [upstream repository's README](https://github.com/ikigai-digital/time-deposit-take-home-kata/blob/c4ea3585e7dd0d4d902268cae83569ca512571b4/README.md).
 
-### How to run
+## Run the service
+
+You need Docker with Docker Compose v2 (Docker Desktop includes both) and a free port 8080. The application image is built inside Docker, so you need no JDK and no Maven.
 
 From the repository root:
 
@@ -16,18 +21,18 @@ From the repository root:
 docker compose up --build
 ```
 
-This builds the application image, starts PostgreSQL, waits until it accepts connections, then starts the application with the `local` profile. On startup Flyway creates the schema and loads ten seeded Time Deposits. The first build downloads Maven and the dependencies, which takes a few minutes. The API is ready when the log shows `Started TimeDepositApplication`.
+This builds the application image, starts PostgreSQL, and starts the application with the `local` profile. On startup Flyway creates the schema and loads ten seeded Time Deposits. The first build downloads Maven and the dependencies, which takes a few minutes. The API is ready when the log shows `Started TimeDepositApplication`.
 
 - To stop, press `Ctrl+C` or run `docker compose down`. The data stays in the `postgres-data` volume, so Balance Updates survive a restart.
 - To start again from the seed data, run `docker compose down -v`, then `docker compose up --build`.
 
-### Trying the endpoints in Swagger UI
+## Try the endpoints in Swagger UI
 
-Open <http://localhost:8080/swagger-ui.html>. It shows the contract as written (`java/src/main/resources/openapi.yaml`, also served at <http://localhost:8080/openapi.yaml>) with its two operations. For each step, expand the operation, click **Try it out**, then **Execute**.
+Open <http://localhost:8080/swagger-ui.html>. It shows the contract as written in `java/src/main/resources/openapi.yaml` (also served at <http://localhost:8080/openapi.yaml>), with its two operations. For each step, expand the operation, click "Try it out", then "Execute".
 
-1. **`GET /v1/time-deposits`** returns `200` and the first page of Time Deposits (default `size` 20), ordered by `id`: the ten seeded Time Deposits with their Withdrawals, and `totalItems: 10`.
-2. **`POST /v1/time-deposits/balance-updates`**, with the optional `Idempotency-Key` field left empty, returns `204` with no body. One Monthly Interest was added to the Balance of every Time Deposit. The interest is computed first, with no transaction open, and all the new Balances are then saved in one transaction.
-3. **`GET /v1/time-deposits`** again. A Time Deposit inside its Plan Type's Eligibility Window grew by one Monthly Interest: the annual rate divided by twelve, applied to the Balance, rounded to the cent. Every other Balance is unchanged, and Days never changes.
+1. `GET /v1/time-deposits` returns `200` and the first page of Time Deposits, ordered by `id`. The page holds the ten seeded Time Deposits with their Withdrawals, and `totalItems` is 10.
+2. `POST /v1/time-deposits/balance-updates`, with the optional `Idempotency-Key` field left empty, returns `204` with no body. It added one Monthly Interest to the Balance of every Time Deposit.
+3. `GET /v1/time-deposits` again. A Time Deposit inside its Plan Type's Eligibility Window grew by one Monthly Interest (the annual rate divided by twelve, applied to the Balance, rounded to the cent). Every other Balance is unchanged, and Days never changes.
 
 | id | Plan Type | Days | Balance before | Balance after | Why |
 |---:|---|---:|---:|---:|---|
@@ -42,9 +47,9 @@ Open <http://localhost:8080/swagger-ui.html>. It shows the contract as written (
 | 9 | premium | 45 | 50000.00 | 50000.00 | Premium interest starts after 45 days |
 | 10 | premium | 46 | 50000.00 | 50208.33 | 5% / 12 of 50000.00 is 208.33 |
 
-Withdrawals are history only and play no part in interest. Every POST without an `Idempotency-Key` adds another month, so a second POST grows the same Balances again. Of two POSTs that overlap in time, one returns `204` and the other returns `409 Conflict` and applies nothing (see [ADR 0001](docs/adr/0001-optimistic-locking-for-the-balance-update.md)).
+Every POST without an `Idempotency-Key` adds another month, so a second POST grows the same Balances again.
 
-To make a retry safe, send an `Idempotency-Key` header with the POST. The first call with a key runs the Balance Update; a later call with the same key returns `204` and adds no interest (see [ADR 0002](docs/adr/0002-idempotency-key-for-the-balance-update.md)). To try it in Swagger UI, type a value such as `april-2026` into the `Idempotency-Key` field and click **Execute** twice: both return `204`, and `GET /v1/time-deposits` shows that only the first one added interest. Keys never expire and are kept in the `postgres-data` volume, so pick a value you have not used yet, or start from the seed data with `docker compose down -v`.
+To see a safe retry, type a value such as `april-2026` into the `Idempotency-Key` field and click "Execute" twice. Both calls return `204`, and `GET /v1/time-deposits` shows that only the first one added interest. Keys never expire and are kept in the `postgres-data` volume, so pick a value you have not used yet, or start again from the seed data.
 
 The same walkthrough with curl:
 
@@ -61,7 +66,7 @@ curl -s -i -X POST -H 'Idempotency-Key: march-2026' http://localhost:8080/v1/tim
 curl -s -i -X POST -H 'Idempotency-Key: march-2026' http://localhost:8080/v1/time-deposits/balance-updates
 ```
 
-### Running the tests
+## Tests and code layout
 
 The tests need JDK 25 and a running Docker daemon, because the integration tests start PostgreSQL with Testcontainers.
 
@@ -72,120 +77,99 @@ cd java
 
 `verify` runs the unit, integration and ArchUnit tests and checks the formatting with Spotless (`./mvnw spotless:apply` fixes it). CI (`.github/workflows/ci.yml`) runs the same command on every push and pull request.
 
-### Package layout
+The code follows a hexagonal layout:
 
-The code follows a hexagonal layout, and ArchUnit tests (`HexagonalArchitectureTest`) fail `./mvnw verify` when it is broken. The domain is `org.ikigaidigital` itself (`TimeDeposit`, `TimeDepositCalculator`, not its sub-packages) plus `org.ikigaidigital.plantype` (the Plan Types and `PlanTypeResolver`); it depends only on the JDK, the SLF4J API and itself. The domain sources live in their own source root, `java/src/main/domain` (tests in `java/src/test/domain`), added to the build with `build-helper-maven-plugin`; everything else is in `java/src/main/java`. The packages are the same in both roots. `org.ikigaidigital.application` holds the use cases, the in- and out-ports and the model they exchange (`application.model`), and may use Spring and the domain but no adapter. `org.ikigaidigital.adapter.web` (generated API interfaces, controller, the Problem Details handler in `web.exception`, web infrastructure) and `org.ikigaidigital.adapter.persistence` (out-port implementations, with the JPA entities in `persistence.entity` and the Spring Data repositories in `persistence.repository`) depend on the application layer and never on each other.
+| Package | Role |
+|---|---|
+| `org.ikigaidigital` | Domain: `TimeDeposit` and `TimeDepositCalculator`. |
+| `org.ikigaidigital.plantype` | Domain: the Plan Types and `PlanTypeResolver`. |
+| `org.ikigaidigital.application` | The use cases, the in- and out-ports, and the model they exchange. |
+| `org.ikigaidigital.adapter.web` | The API interfaces generated from the contract, the controller, the error handler and the access log. |
+| `org.ikigaidigital.adapter.persistence` | The out-port implementations, the JPA entities and the Spring Data repositories. |
 
-### AI-assisted development
+- The domain depends only on the JDK, the SLF4J API and itself.
+- The application layer may use Spring and the domain, and no adapter.
+- The two adapters depend on the application layer and never on each other.
 
-The write-up of how AI was used on this solution (tools, setup, rules and prompts, and which parts were AI-assisted) is tracked in ticket 10. It is not in the repository yet and will be linked here when it lands.
+ArchUnit tests (`HexagonalArchitectureTest`) fail `./mvnw verify` when the code breaks one of these rules.
 
-### Assumptions
+The domain sources have their own source root, `java/src/main/domain`, with their tests in `java/src/test/domain`. Everything else is in `java/src/main/java`. `TimeDepositApplication`, the Spring Boot entry point, also sits in `org.ikigaidigital` and is the one class there that may use Spring.
 
-- "The application boots and stays up" needs an embedded web server, so the Spring MVC starter (Tomcat) is added before any endpoint exists. (ticket 2)
-- A negative Balance is pinned as the calculator handles it today: interest is negative and the Balance shrinks, rounding half-up (away from zero) on a half cent. (ticket 3)
-- Plan Type matching is case-sensitive today, so `"Basic"` earns no interest, the same as an unknown Plan Type such as `"gold"`. Both are pinned as "no interest, Balance unchanged" rather than rejected. (ticket 3)
-- "No breaking changes" is read to cover `TimeDepositCalculator`'s no-arg constructor too, although the README names only `TimeDeposit` and the `updateBalance` signature. The constructor is kept and knows the Basic, Student and Premium Plans, so existing callers compile unchanged. It is the only constructor, and a new Plan Type is added to the list inside it. (ticket 4)
-- A missing (null) Plan Type is bad data like any unknown value: it is logged at `ERROR` and earns no interest. The original calculator threw a `NullPointerException` for it once Days passed 30. (ticket 4)
-- The README asks the GET endpoint for "a list of all time deposits" with five fields. That is read as what each Time Deposit in the response must contain, not as a fixed response format, unlike the constraints the README states strictly (no breaking changes, exactly two endpoints). `GET /v1/time-deposits` therefore returns the Time Deposits a page at a time, in an envelope `{ items, page, size, totalItems, totalPages }`, because a response holding every Time Deposit of a bank has no upper size. Each item has exactly the README's fields, and paging through `items` reaches all Time Deposits. (ticket 5)
-- `days` is stored as-is; the application never advances it. (ticket 5)
-- `created_at` is when the row was inserted, not when the Time Deposit was opened. (ticket 5)
-- Tables and columns use PostgreSQL's snake_case (`time_deposits.plan_type`, `withdrawals.time_deposit_id`) for the README's `timeDeposits.planType` and `withdrawals.timeDepositId`. The API keeps the README's camelCase names. (ticket 5)
-- `planType` is stored and returned as a plain string: no CHECK constraint in the database and no enum in the contract. A Time Deposit with an unknown Plan Type is bad data the application must survive and still list, not reject. (ticket 5)
-- A page past the last one returns `200` with an empty `items` list, not an error. (ticket 5)
-- A Time Deposit's Withdrawals are listed by `id` ascending (the order they were recorded); the README does not specify an order. (ticket 5)
-- The request id is the OpenTelemetry trace id (Micrometer Tracing, `spring-boot-starter-opentelemetry`), not an `X-Request-Id`: it is taken from an incoming W3C `traceparent` header or generated, and returned in the `X-Trace-Id` response header. Spring Boot's log pattern prints it on every log line of the request as `[traceId-spanId]`. A malformed `traceparent` is ignored and a new trace is started, so a client cannot inject text into the logs through it. Nothing is exported: metrics, trace and log export over OTLP are switched off. (ticket 6)
-- Swagger UI (`/swagger-ui.html`, `/swagger-ui/**`), springdoc's api-docs (`/v3/api-docs`, `/v3/api-docs.yaml`, `/v3/api-docs/**`) and the contract file `/openapi.yaml` are skipped by the access log entirely: no log lines and no `X-Trace-Id`. Every other request is logged, including one to an unknown path. (ticket 6)
-- An error that no specific handler maps to a `400` or `409` (for example a database failure) is logged at `ERROR` with its trace id and answered with a `500` Problem Details response whose `detail` is a fixed "An unexpected error occurred.". The exception's message stays in the log, because it can reveal internals such as SQL. (ticket 6)
-- When an exception escapes every handler before the response is committed, the access log's end line reports `status=500`, the status the servlet container answers with. If the response was already committed, it reports the status already sent. (ticket 6)
-- Every call to `POST /v1/time-deposits/balance-updates` adds a month of interest. Triggering it once a month is the caller's job (e.g. an external scheduler); retry safety is ticket 11. (ticket 7)
-- The whole set of Time Deposits fits in memory during a Balance Update. Batching is out of scope. (ticket 7)
-- No row locks. Optimistic locking makes concurrent Balance Updates deterministic: each `204` means exactly one month of interest was applied, and the loser returns `409` having applied nothing. See `docs/adr/0001-optimistic-locking-for-the-balance-update.md`. (ticket 7)
-- "All or nothing" means all the writes of a Balance Update commit in one transaction. The load and the interest calculation run before it, in no transaction of the Balance Update's own (Spring Data reads in a short read-only transaction of its own), so no transaction or database connection is held while interest is computed; each changed Time Deposit's `version` from the load is checked when it is saved. A Time Deposit that earns no interest is not saved. (ticket 7)
-- The "Balance Update finished, N Time Deposits updated" log counts every Time Deposit the Balance Update went through, including those that earned no interest. (ticket 7)
-- The domain keeps the Balance in a `Double` (the shared `TimeDeposit` class must not change), which holds 15 significant digits exactly. A Balance below 10^13 keeps every cent when it receives interest; a larger one may lose cents then. A Balance that receives no interest (outside its Eligibility Window, or with an unknown Plan Type) is not saved, so it keeps its stored value exactly, however large. (ticket 7)
-- `TimeDepositApplication` (the `@SpringBootApplication` class) stays in `org.ikigaidigital`, which is also the domain package, because moving it would change Spring's component scanning. It is treated as the composition root: the only class in the domain package allowed to depend on Spring, and the one class the ArchUnit domain rule leaves out. No domain class may depend on it. (ticket 8)
-- The ArchUnit domain rule is an allow-list (the JDK, the SLF4J API and the domain itself), stricter than the ticket's list of Spring, JPA, web types and adapters. It also keeps the domain off the application layer and off any other library, so adding a library to the domain means changing the rule on purpose. (ticket 8)
-- The ticket's "Docker only" prerequisite covers running the application. Running the tests still needs JDK 25 (and Docker for Testcontainers), as in CI. (ticket 9)
-- The Docker image build skips the tests: they need a Docker daemon of their own (Testcontainers). They run with `./mvnw verify` locally and in CI. (ticket 9)
-- PostgreSQL is not published on a host port. The walkthrough only needs the API, and a published 5432 would clash with a PostgreSQL already running on the host. `docker compose exec postgres psql -U time_deposits` reaches it when needed. (ticket 9)
-- The database lives in a named volume, so Balance Updates survive `docker compose down` and `up`. `docker compose down -v` resets to the seed data. (ticket 9)
-- The AI write-up is ticket 10, which has not landed yet. The README says so instead of linking to a file that does not exist; the link is added when ticket 10 lands. (ticket 9)
-- The original assignment text is kept word for word under `## Assignment`, with its headings one level lower so they nest there. Its title, "Time Deposit Refactoring Kata - Take-Home Assignment", became the README's title, "Time Deposit Refactoring Kata". (ticket 9)
-- `Idempotency-Key` values never expire, and a key is global: not scoped to an endpoint or a client, since only `POST /v1/time-deposits/balance-updates` accepts one. See `docs/adr/0002-idempotency-key-for-the-balance-update.md`. (ticket 11)
-- An `Idempotency-Key` is up to 255 letters, digits and `._:+/=-`, so it is safe to log; any other value gets a `400` and adds no interest. (ticket 11)
-- The IETF Idempotency-Key draft sends the key as a Structured Field string in double quotes, while most clients send it bare. Both forms are accepted and name the same key: `"abc"` and `abc` are one key. (ticket 11)
-- Two calls with the same `Idempotency-Key` that overlap may both load the Time Deposits and compute the interest, but only one saves it. The other waits only while the first one's write transaction is open: if that committed, the waiting call is a replay and returns `204`; if it failed, the waiting call saves its own Balance Update. The IETF draft suggests answering `409` instead. (ticket 11)
+## Decisions and assumptions
 
-## Assignment
+These are my readings and choices where the assignment left room. The idempotency key and the optimistic locking each have an ADR in [`docs/adr/`](docs/adr/).
 
-### XA Bank Time Deposit
+### API
 
-#### Context
-A junior developer implemented domain logic for a time deposit system but did not complete the API functionality. Your task is to refactor the existing codebase to implement all required functionalities based on the provided business requirements, ensuring no breaking changes occur.
+- **GET returns a page, not a bare array.** The assignment asks the GET endpoint for "a list of all time deposits" with five fields. I read that as what each Time Deposit in the response must contain, not as a fixed response format, unlike the constraints the assignment states strictly (no breaking changes, exactly two endpoints). `GET /v1/time-deposits` returns the Time Deposits a page at a time, in an envelope `{ items, page, size, totalItems, totalPages }`, because a response holding every Time Deposit of a bank has no upper size. Each item has exactly the assignment's fields, and paging through `items` reaches all Time Deposits.
+- **Every POST adds one month of interest.** The assignment does not say when a Balance Update runs. The application has no schedule and never advances Days, so calling `POST /v1/time-deposits/balance-updates` once a month is the caller's job.
+- **The POST takes an optional `Idempotency-Key` header.** The assignment does not ask for it. I added it because the POST changes money and is not safe to repeat. A client whose call timed out cannot tell whether the interest was added, and a retry would add it a second time. With a key, a retry adds nothing. Without a key the endpoint behaves as the assignment describes. See [ADR 0002](docs/adr/0002-idempotency-key-for-the-balance-update.md).
+- **The application logs each API request when it starts and when it ends.** Every log line of a request carries its trace id, and the `X-Trace-Id` response header returns it. Nothing is exported to a collector.
 
-#### Requirements
+### Interest and Plan Types
 
-1. **API Endpoints**:
-    - Create a RESTful API endpoint to update the balances of all time deposits in the database.
-    - Create a RESTful API endpoint to retrieve all time deposits.
-        - The GET endpoint should return a list of all time deposits with the following schema:
-            - `id`
-            - `planType`
-            - `balance`
-            - `days`
-            - `withdrawals`
+- **The original calculator is the specification.** The assignment says `updateBalance` works correctly, so characterization tests pinned its results before any refactoring, edge cases included: half-up rounding of the interest to the cent, a zero Balance, a negative Balance, an unknown Plan Type.
+- **A Time Deposit with an unknown Plan Type is bad data, and the application survives it.** This covers a value such as `gold`, a known value in the wrong case such as `Basic`, and a missing value. Such a Time Deposit earns no interest, is logged at `ERROR`, is still returned by the GET, and does not stop the Balance Update of the others. For that reason `planType` is a plain string, with no CHECK constraint in the database and no enum in the contract. One behaviour differs from the original: with a missing Plan Type the original calculator threw a `NullPointerException` once Days passed 30.
+- **Withdrawals are history only.** The application stores and returns them, and they play no part in interest, as in the original calculator. No endpoint creates them, since the solution must have exactly two. The seed data has four.
 
-2. **Database Setup**:
-    - Store all time deposit plans in a database.
-    - Define the following tables:
-        - `timeDeposits`:
-            - `id`: Integer (primary key)
-            - `planType`: String (required)
-            - `days`: Integer (required)
-            - `balance`: Decimal (required)
-        - `withdrawals`:
-            - `id`: Integer (primary key)
-            - `timeDepositId`: Integer (foreign key, required)
-            - `amount`: Decimal (required)
-            - `date`: Date (required)
+### Data
 
-3. **Interest Calculation**:
-    - Implement logic to calculate monthly interest based on the plan type:
-        - **Basic Plan**: 1% interest
-        - **Student Plan**: 3% interest (no interest after 1 year)
-        - **Premium Plan**: 5% interest (interest starts after 45 days)
-    - No interest is applied for the first 30 days for any existing plans.
+- **The schema has three additions.** `time_deposits` has a `version` column for the optimistic locking, both tables have row timestamps, and a third table, `idempotency_keys`, stores the keys.
+- **Money is exact in the database and in the API.** The database holds `NUMERIC(19,2)` and the API returns that value unchanged. The domain keeps the Balance in a `Double`, because the shared `TimeDeposit` class must not change. The application rounds a new Balance to the cent when it saves it, and does not write a Time Deposit that earned no interest.
+- **A Balance Update is all or nothing and runs in memory.** The application loads every Time Deposit, computes the interest, and saves all new Balances in one transaction. Batching for a very large number of Time Deposits is out of scope.
+- **Seed data is for the local run only.** The `local` profile, which `docker compose` uses, loads the ten Time Deposits of the walkthrough. Tests start from the empty schema.
 
-4. **Refactoring Constraints**:
-    - Do not introduce breaking changes to the shared `TimeDeposit` class or modify the `updateBalance` method signature.
-    - Ensure the design is extensible to accommodate future complexities in interest calculations.
+## AI-assisted development
 
-5. **Code Quality**:
-    - Adhere to SOLID principles, design patterns, and clean code practices where applicable.
+An AI coding agent, Claude Code, wrote all the code, tests, configuration and documentation in this repository. I wrote no code by hand. I made the decisions, and I reviewed and merged every pull request.
 
-6. **AI-Assisted Development**:
-    - Set up an AI harness or agent workflow and use it throughout the development for this take-home exercise.
-    - Briefly document the tools and setup used (e.g., LLMs, coding assistants, agentic frameworks, configuration).
-    - Ensure your AI setup is practical and reproducible.
-    - Include any custom rules, system prompts, or agent configurations used.
-    - Include a brief summary of which parts of the solution were AI-assisted and why.
+### How the work went
 
-#### Important Guidelines
-- The existing `TimeDepositCalculator.updateBalance` method is functioning correctly. Ensure its behavior remains unchanged after refactoring.
-- The final solution must include **exactly two API endpoints**. Do not develop additional endpoints.
-- **Do not** create a pull request or a new branch in the ikigai-digital repository. Instead, fork the repository into your own GitHub repository and develop the solution there.
-- Handling invalid input or exceptions is not required.
-- Use any tools, frameworks, or libraries you find suitable.
-- In case of ambiguity, make logical assumptions and justify them in code comments.
+1. I prepared the repository for the agent with `/setup-matt-pocock-skills`. It wrote [`AGENTS.md`](AGENTS.md) and [`docs/agents/`](docs/agents/), which tell the agent where the issues, the glossary and the ADRs live.
+2. I designed the solution in an interview with `/grill-with-docs`. The agent wrote the agreed terms into [`GLOSSARY.md`](GLOSSARY.md) and the two larger decisions into ADRs.
+3. The agent wrote the design up as tickets, one [GitHub issue](https://github.com/jerdno/time-deposit-take-home-kata/issues?q=is%3Aissue) each.
+4. The agent implemented one ticket at a time, each on its own branch and in its own [pull request](https://github.com/jerdno/time-deposit-take-home-kata/pulls?q=is%3Apr).
+5. `/code-review` checked each pull request against the repository's rules and against its ticket. Then I read it, and merged it or sent it back.
+6. At the end, `/demonstrate` started the application with `docker compose` and tested both endpoints through Swagger UI and `curl`, the way a tester would.
+7. A fresh agent session compared the finished repository with the assignment text. That led to the last code change and to this README.
 
-#### Preferred Stack
-- Use an OpenAPI Swagger contract.
-- Embrace Hexagonal Architecture.
-- Follow atomic commit practices.
-- Utilize testcontainers.
-- Leverage AI-assisted development tools for code generation, testing, and refactoring.
+### How the tickets were set up
 
-#### Submission Instructions
-- Provide clear instructions on how to trigger the endpoints using the Swagger contract.
-- Email the link to your public GitHub repository.
+- One ticket is one issue, one branch and one pull request. The label `ready-for-agent` marks a ticket the agent can implement, and `ready-for-human` one that needs me.
+- Every ticket has the same parts: the constraints, what to build, the acceptance criteria as a checklist of tests, and the assumptions to record. The decisions from the interview are already in the ticket, so the agent implements and does not decide.
+- Every ticket opens with the same constraints: use the terms in `GLOSSARY.md`, don't break `TimeDeposit` or the `updateBalance` signature, keep `updateBalance` behaving as it does today, make atomic commits, and record each assumption in a code comment and in this README.
+- The order of the tickets protects the existing behaviour:
+  1. A Java-only project on the latest stack, with CI.
+  2. Characterization tests for `updateBalance`, before any refactoring.
+  3. The Plan Type classes.
+  4. `GET /v1/time-deposits` end to end: database, persistence, use case, REST, with Testcontainers tests.
+  5. `POST /v1/time-deposits/balance-updates` end to end, the same way.
+  6. The ArchUnit rules, the access log, and `docker compose` with the README.
+  7. The optional idempotency key.
+- I squash-merged the pull requests, so `main` has one commit per ticket, and its message lists the commits inside it. The atomic commits themselves are on the `ticket/*` branches.
+
+### Tools, rules and skills
+
+- Claude Code in its desktop app, with GitHub Issues and the `gh` CLI as the issue tracker.
+- [`AGENTS.md`](AGENTS.md) holds the standing rules for the agent, and `CLAUDE.md` loads it into Claude Code.
+- The skills I used are in [`.claude/skills/`](.claude/skills/), copied from [my fork](https://github.com/jerdno/mp-skills) of [`mattpocock/skills`](https://github.com/mattpocock/skills). Most are Matt Pocock's. Some are his with my changes, and some I wrote myself.
+
+| Skill | What it does | Where I used it |
+|---|---|---|
+| `setup-matt-pocock-skills` | Configures a repository for the other skills: issue tracker, labels, where the domain docs live. | `AGENTS.md` and `docs/agents/`. |
+| `grill-with-docs` | Runs `grilling` and `domain-modeling` together. | The design interview. |
+| `grilling` | Interviews me, one question at a time, until the plan has no open decision left. | The design decisions. |
+| `domain-modeling` | Keeps the glossary and the ADRs up to date while the design is discussed. | `GLOSSARY.md` and both ADRs. |
+| `writing-for-agents` | Guidance for writing a document that an agent will read. | The tickets and `AGENTS.md`. |
+| `code-review` | Reviews a change in two parallel sub-agents, one against the repository's standards and one against the ticket. | Every ticket's pull request. |
+| `pr` | A pull request template: summary, evidence, merge risk. | The pull request descriptions. |
+| `demonstrate` | Tests a change like a human tester: a fresh sub-agent runs the application and drives its real UI or API. | The end-to-end check of both endpoints. |
+| `writing-for-humans` | Edits a text for its reader: what we know, what we assume, and nothing the reader does not need. | This README. |
+
+### Reproducing the setup
+
+1. Install [Claude Code](https://claude.com/claude-code) and the GitHub CLI `gh`, and clone this repository.
+2. Start Claude Code in the repository root. It loads `AGENTS.md` through `CLAUDE.md`, and every skill in `.claude/skills/`. Nothing else needs to be installed.
+3. Work the same way: run `/grill-with-docs` on an idea, have the agent write the outcome up as issues, ask it to implement an issue labelled `ready-for-agent`, then run `/code-review` and `/demonstrate` on the result.
+
+The issue tracker configuration in `docs/agents/issue-tracker.md` points at this fork. Change it to use the skills in another repository.
