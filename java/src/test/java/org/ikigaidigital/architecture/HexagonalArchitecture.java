@@ -23,8 +23,7 @@ import com.tngtech.archunit.lang.ArchRule;
  */
 final class HexagonalArchitecture {
 
-    // Assumption (ticket 8): the @SpringBootApplication class is the composition root (see TimeDepositApplication). It
-    // is the one class in the domain package left out of the domain rule, and the domain may not depend on it.
+    // The @SpringBootApplication class, left out of the domain rule (see the README assumptions).
     static final String COMPOSITION_ROOT = "TimeDepositApplication";
 
     private HexagonalArchitecture() {}
@@ -33,9 +32,6 @@ final class HexagonalArchitecture {
      * The domain depends only on the JDK, the SLF4J API and itself: no Spring, no Jakarta Persistence, no web types, no
      * application or adapter packages.
      */
-    // Assumption (ticket 8): the rule is an allow-list, stricter than the ticket's "no Spring, JPA, web types or
-    // adapters". It also keeps the domain off the application layer and off any other library; a new library in the
-    // domain is then a deliberate change to this rule.
     static ArchRule domainDependsOnlyOnTheJdkSlf4jApiAndItself(String root) {
         String plantype = root + ".plantype..";
         String compositionRoot = root + "." + COMPOSITION_ROOT;

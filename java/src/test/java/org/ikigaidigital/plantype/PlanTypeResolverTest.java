@@ -76,7 +76,6 @@ class PlanTypeResolverTest {
         assertThat(logged.list).extracting(ILoggingEvent::getLevel).containsExactly(Level.ERROR);
     }
 
-    // Assumption (ticket 4): a missing (null) Plan Type is bad data like any unknown value: logged, no interest.
     @Test
     void treatsAMissingValueAsUnknown() {
         TimeDeposit missing = timeDeposit(9, null);

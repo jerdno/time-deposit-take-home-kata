@@ -26,8 +26,6 @@ class TimeDepositsController implements TimeDepositsApi {
         this.applyBalanceUpdate = applyBalanceUpdate;
     }
 
-    // Assumption (ticket 5): the README asks for "a list"; we return an envelope { items, page, size, totalItems,
-    // totalPages } because of pagination. Each item still matches the README schema.
     @Override
     public ResponseEntity<TimeDepositPageDto> getTimeDeposits(Integer page, Integer size) {
         TimeDepositPage result = getTimeDeposits.getTimeDeposits(new PageQuery(page, size));

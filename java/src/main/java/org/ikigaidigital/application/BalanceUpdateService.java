@@ -35,33 +35,19 @@ class BalanceUpdateService implements ApplyBalanceUpdateUseCase {
         this.transactionTemplate = new TransactionTemplate(transactionManager);
     }
 
-    // Assumption (ticket 7): every call adds a month of interest. Triggering it once a month is the caller's job
-    // (e.g. an external scheduler); retry safety is ticket 11.
-    //
-    // No transaction of ours around the load and the calculation: the load runs in Spring Data's own short read-only
-    // one, and the calculation runs with no transaction open, so it holds no connection. Only the save opens one
-    // (docs/adr/0001-optimistic-locking-for-the-balance-update.md).
     @Override
     public void applyBalanceUpdate() {
         List<VersionedTimeDeposit> timeDeposits = loadAllTimeDepositsPort.loadAllTimeDeposits();
         timeDepositCalculator.updateBalance(
                 timeDeposits.stream().map(VersionedTimeDeposit::timeDeposit).toList());
-        // A Time Deposit the calculator left unchanged (no interest: outside its Eligibility Window, or an unknown Plan
-        // Type) has nothing to save, so it is not written at all.
         save(timeDeposits.stream().filter(VersionedTimeDeposit::balanceChanged).toList());
-        // Assumption (ticket 7): N counts every Time Deposit the Balance Update went through, including those that
-        // earned no interest (outside their Eligibility Window, or with an unknown Plan Type).
         log.info("Balance Update finished, {} Time Deposits updated", timeDeposits.size());
     }
 
-    // One short transaction for all the writes: every changed Balance is saved, or none is.
     private void save(List<VersionedTimeDeposit> changed) {
         try {
             transactionTemplate.executeWithoutResult(status -> saveBalancesPort.saveBalances(changed));
         } catch (OptimisticLockingFailureException e) {
-            // Assumption (ticket 7): no row locks. Optimistic locking makes concurrent calls deterministic: each 204
-            // means exactly one month of interest was applied, and the loser rolls back as a whole
-            // (docs/adr/0001-optimistic-locking-for-the-balance-update.md).
             throw new ConcurrentBalanceUpdateException(e);
         }
     }

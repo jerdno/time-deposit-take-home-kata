@@ -14,8 +14,6 @@ public class TimeDepositCalculator {
 
     private final PlanTypeResolver planTypeResolver;
 
-    // Assumption (ticket 4): the no-arg constructor was removed. The README protects only TimeDeposit and the
-    // updateBalance signature, and the only caller in this repo was the test.
     public TimeDepositCalculator(PlanTypeResolver planTypeResolver) {
         this.planTypeResolver = planTypeResolver;
     }

@@ -122,8 +122,6 @@ class TimeDepositCalculatorTest {
         }
     }
 
-    // Assumption (ticket 3): a negative Balance is pinned as the calculator handles it today
-    // (negative interest, the Balance shrinks), because its current results are the spec.
     @Nested
     class NegativeBalance {
 
@@ -146,8 +144,6 @@ class TimeDepositCalculatorTest {
         }
     }
 
-    // Assumption (ticket 3): Plan Type matching is case-sensitive today, so "Basic" is as unknown as "gold".
-    // Both are pinned as earning no interest rather than being rejected.
     @Nested
     class UnknownPlanType {
 

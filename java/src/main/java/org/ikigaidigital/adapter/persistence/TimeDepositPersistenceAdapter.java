@@ -82,8 +82,7 @@ class TimeDepositPersistenceAdapter implements LoadTimeDepositPagePort, LoadAllT
                 items, query.page(), query.size(), rows.getFirst().totalItems());
     }
 
-    // Assumption (ticket 5): a page past the last one is an empty page (200), not an error. The page query returned no
-    // row to carry the total, so it is counted separately.
+    // The page query returned no row to carry the total, so it is counted separately.
     private TimeDepositPage emptyPage(PageQuery query) {
         return new TimeDepositPage(List.of(), query.page(), query.size(), timeDeposits.count());
     }
@@ -134,9 +133,6 @@ class TimeDepositPersistenceAdapter implements LoadTimeDepositPagePort, LoadAllT
         return BigDecimal.valueOf(balance).setScale(2, RoundingMode.HALF_UP);
     }
 
-    // Assumption (ticket 7): the domain's Balance is a Double (TimeDeposit must not change), which holds 15
-    // significant digits exactly. Balances below 10^13 (with their two decimals) keep every cent through a Balance
-    // Update; larger ones may lose cents.
     private static TimeDeposit toDomain(TimeDepositEntity timeDeposit) {
         return new TimeDeposit(
                 timeDeposit.getId(),
