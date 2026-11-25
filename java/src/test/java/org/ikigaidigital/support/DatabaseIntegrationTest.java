@@ -23,7 +23,8 @@ public abstract class DatabaseIntegrationTest {
 
     @BeforeEach
     void emptyTables() {
-        jdbc.sql("TRUNCATE withdrawals, time_deposits RESTART IDENTITY CASCADE").update();
+        jdbc.sql("TRUNCATE withdrawals, time_deposits, idempotency_keys RESTART IDENTITY CASCADE")
+                .update();
     }
 
     /** Inserts a Time Deposit and returns its generated id. */

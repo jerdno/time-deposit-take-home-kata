@@ -1,5 +1,11 @@
 package org.ikigaidigital.support;
 
+import static java.util.stream.Collectors.toMap;
+
+import java.math.BigDecimal;
+import java.util.Map;
+import org.ikigaidigital.adapter.web.api.model.TimeDepositDto;
+import org.ikigaidigital.adapter.web.api.model.TimeDepositPageDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureRestTestClient;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -21,4 +27,20 @@ public abstract class ApiIntegrationTest extends DatabaseIntegrationTest {
 
     @Autowired
     protected RestTestClient client;
+
+    /** Every Time Deposit's Balance by id, from one {@code GET /v1/time-deposits}. */
+    protected Map<Integer, BigDecimal> balancesById() {
+        return client
+                .get()
+                .uri("/v1/time-deposits?size=100")
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody(TimeDepositPageDto.class)
+                .returnResult()
+                .getResponseBody()
+                .getItems()
+                .stream()
+                .collect(toMap(TimeDepositDto::getId, TimeDepositDto::getBalance));
+    }
 }

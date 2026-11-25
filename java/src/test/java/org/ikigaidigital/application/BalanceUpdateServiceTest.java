@@ -1,5 +1,6 @@
 package org.ikigaidigital.application;
 
+import static java.util.stream.Collectors.toMap;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -72,8 +73,9 @@ class BalanceUpdateServiceTest extends DatabaseIntegrationTest {
 
         assertThatThrownBy(balanceUpdate::applyBalanceUpdate).isInstanceOf(ConcurrentBalanceUpdateException.class);
 
-        assertThat(balanceOf(basic)).isEqualByComparingTo("1200.00");
-        assertThat(balanceOf(premium)).isEqualByComparingTo("1200.00");
+        assertThat(balancesById())
+                .containsExactlyInAnyOrderEntriesOf(
+                        Map.of(basic, new BigDecimal("1200.00"), premium, new BigDecimal("1200.00")));
     }
 
     private Map<String, Object> versionAndUpdatedAtOf(int id) {
@@ -83,10 +85,12 @@ class BalanceUpdateServiceTest extends DatabaseIntegrationTest {
                 .singleRow();
     }
 
-    private BigDecimal balanceOf(int id) {
-        return jdbc.sql("SELECT balance FROM time_deposits WHERE id = ?")
-                .param(id)
-                .query(BigDecimal.class)
-                .single();
+    private Map<Integer, BigDecimal> balancesById() {
+        return jdbc
+                .sql("SELECT id, balance FROM time_deposits")
+                .query((rs, rowNum) -> Map.entry(rs.getInt("id"), rs.getBigDecimal("balance")))
+                .list()
+                .stream()
+                .collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 }

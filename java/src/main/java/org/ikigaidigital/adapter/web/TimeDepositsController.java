@@ -11,6 +11,7 @@ import org.ikigaidigital.application.model.TimeDepositView;
 import org.ikigaidigital.application.model.WithdrawalView;
 import org.ikigaidigital.application.port.in.ApplyBalanceUpdateUseCase;
 import org.ikigaidigital.application.port.in.GetTimeDepositsUseCase;
+import org.jspecify.annotations.Nullable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -38,9 +39,21 @@ class TimeDepositsController implements TimeDepositsApi {
     }
 
     @Override
-    public ResponseEntity<Void> applyBalanceUpdate() {
-        applyBalanceUpdate.applyBalanceUpdate();
+    public ResponseEntity<Void> applyBalanceUpdate(@Nullable String idempotencyKey) {
+        if (idempotencyKey == null) {
+            applyBalanceUpdate.applyBalanceUpdate();
+        } else {
+            applyBalanceUpdate.applyBalanceUpdate(unquote(idempotencyKey));
+        }
         return ResponseEntity.noContent().build();
+    }
+
+    // The header is either a bare key or, as the IETF Idempotency-Key draft writes it, the key in double quotes; the
+    // contract's pattern has already checked which.
+    private static String unquote(String idempotencyKey) {
+        return idempotencyKey.startsWith("\"")
+                ? idempotencyKey.substring(1, idempotencyKey.length() - 1)
+                : idempotencyKey;
     }
 
     private static TimeDepositDto toDto(TimeDepositView timeDeposit) {
