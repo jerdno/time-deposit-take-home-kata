@@ -33,14 +33,8 @@ class AccessLogFilter extends OncePerRequestFilter {
     private static final String REQUEST_ID_HEADER = "X-Request-Id";
     private static final String REQUEST_ID_MDC_KEY = "requestId";
 
-    // Assumption (ticket 6): the incoming id is client input that lands in every log line and in a response header.
-    // Only up to 128 characters of letters, digits and . _ : + / = - are reused (enough for UUIDs and the usual
-    // trace ids); anything else, such as a line break that would forge a log line, gets a generated id instead.
     private static final Pattern SAFE_REQUEST_ID = Pattern.compile("[A-Za-z0-9._:+/=-]{1,128}");
 
-    // Assumption (ticket 6): Swagger UI (springdoc's default paths), springdoc's api-docs and the contract that Swagger
-    // UI shows (/openapi.yaml) are skipped entirely: no access log lines and no request id. Every other request is
-    // logged, including one to an unknown path.
     private static final Set<String> API_DOCUMENTATION_FILES =
             Set.of("/swagger-ui.html", "/openapi.yaml", "/v3/api-docs", "/v3/api-docs.yaml");
     private static final List<String> API_DOCUMENTATION_DIRECTORIES = List.of("/swagger-ui/", "/v3/api-docs/");
@@ -72,9 +66,6 @@ class AccessLogFilter extends OncePerRequestFilter {
             chain.doFilter(request, response);
             completed = true;
         } finally {
-            // Assumption (ticket 6): an exception that escapes the chain before the response is committed has set no
-            // status; the servlet container answers it with a 500, so that is the status the end line reports. A
-            // committed response keeps the status already sent.
             int status = completed || response.isCommitted()
                     ? response.getStatus()
                     : HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
