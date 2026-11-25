@@ -114,7 +114,7 @@ The write-up of how AI was used on this solution (tools, setup, rules and prompt
 - `Idempotency-Key` values never expire, and a key is global: not scoped to an endpoint or a client, since only `POST /v1/time-deposits/balance-updates` accepts one. See `docs/adr/0002-idempotency-key-for-the-balance-update.md`. (ticket 11)
 - An `Idempotency-Key` is up to 255 letters, digits and `._:+/=-`, so it is safe to log; any other value gets a `400` and adds no interest. (ticket 11)
 - The IETF Idempotency-Key draft sends the key as a Structured Field string in double quotes, while most clients send it bare. Both forms are accepted and name the same key: `"abc"` and `abc` are one key. (ticket 11)
-- A call that arrives while another call with the same `Idempotency-Key` is still running waits for it. If that one committed, the waiting call is a replay and returns `204`; if it failed, the waiting call runs the Balance Update. The IETF draft suggests answering `409` instead. (ticket 11)
+- Two calls with the same `Idempotency-Key` that overlap may both load the Time Deposits and compute the interest, but only one saves it. The other waits only while the first one's write transaction is open: if that committed, the waiting call is a replay and returns `204`; if it failed, the waiting call saves its own Balance Update. The IETF draft suggests answering `409` instead. (ticket 11)
 
 ## Assignment
 
