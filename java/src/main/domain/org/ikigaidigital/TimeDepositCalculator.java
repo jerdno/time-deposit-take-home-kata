@@ -22,12 +22,7 @@ public class TimeDepositCalculator {
      * Plan Type that exists today; a new Plan Type is one more entry in this list.
      */
     public TimeDepositCalculator() {
-        this(new PlanTypeResolver(List.of(new BasicPlan(), new StudentPlan(), new PremiumPlan())));
-    }
-
-    /** A calculator for another set of Plan Types. */
-    public TimeDepositCalculator(PlanTypeResolver planTypeResolver) {
-        this.planTypeResolver = planTypeResolver;
+        this.planTypeResolver = new PlanTypeResolver(List.of(new BasicPlan(), new StudentPlan(), new PremiumPlan()));
     }
 
     /**
