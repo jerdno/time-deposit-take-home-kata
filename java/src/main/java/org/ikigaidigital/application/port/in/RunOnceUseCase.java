@@ -23,6 +23,9 @@ public interface RunOnceUseCase {
      * while the first's write transaction is open: it writes if the first rolled back, and is skipped if the first
      * committed.
      *
+     * <p>A skipped call is logged at INFO with its key.
+     *
+     * @param idempotencyKey safe to log: the caller checks its format (no line breaks)
      * @throws IllegalStateException if the work opened no {@code WriteTransaction}, or more than one
      */
     Outcome runOnce(String idempotencyKey, Runnable work);

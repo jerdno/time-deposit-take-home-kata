@@ -1,10 +1,7 @@
 package org.ikigaidigital.adapter.web;
 
 import org.ikigaidigital.application.port.in.RunOnceUseCase;
-import org.ikigaidigital.application.port.in.RunOnceUseCase.Outcome;
 import org.jspecify.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 /**
@@ -14,8 +11,6 @@ import org.springframework.stereotype.Component;
  */
 @Component
 class IdempotentRequests {
-
-    private static final Logger log = LoggerFactory.getLogger(IdempotentRequests.class);
 
     private final RunOnceUseCase runOnce;
 
@@ -33,10 +28,8 @@ class IdempotentRequests {
             return;
         }
         String key = unquote(idempotencyKey);
-        if (runOnce.runOnce(key, work) == Outcome.SKIPPED) {
-            // The key matches the contract's pattern (letters, digits, ._:+/=-), so it cannot forge log lines.
-            log.info("Idempotency-Key {} was already used; the request was skipped", key);
-        }
+        // The key matches the contract's pattern (letters, digits, ._:+/=-), so it is safe to log.
+        runOnce.runOnce(key, work);
     }
 
     private static String unquote(String idempotencyKey) {
