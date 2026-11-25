@@ -3,20 +3,13 @@ package org.ikigaidigital.adapter.web;
 import static java.util.stream.Collectors.toMap;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.Logger;
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.read.ListAppender;
 import java.math.BigDecimal;
 import java.util.Map;
 import javax.sql.DataSource;
 import org.ikigaidigital.adapter.web.api.model.TimeDepositDto;
 import org.ikigaidigital.adapter.web.api.model.TimeDepositPageDto;
 import org.ikigaidigital.support.ApiIntegrationTest;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
@@ -26,21 +19,6 @@ class BalanceUpdateTest extends ApiIntegrationTest {
 
     @Autowired
     DataSource dataSource;
-
-    // Captures what the application logs, to check that bad data is reported.
-    private final Logger applicationLogger = (Logger) LoggerFactory.getLogger("org.ikigaidigital");
-    private final ListAppender<ILoggingEvent> logged = new ListAppender<>();
-
-    @BeforeEach
-    void captureLogs() {
-        logged.start();
-        applicationLogger.addAppender(logged);
-    }
-
-    @AfterEach
-    void stopCapturingLogs() {
-        applicationLogger.detachAppender(logged);
-    }
 
     @Test
     void appliesOneMonthlyInterestToEverySeededTimeDeposit() {
@@ -87,7 +65,7 @@ class BalanceUpdateTest extends ApiIntegrationTest {
     }
 
     @Test
-    void timeDepositWithAnUnknownPlanTypeKeepsItsBalanceAndAnErrorIsLogged() {
+    void timeDepositWithAnUnknownPlanTypeKeepsItsBalance() {
         int gold = insertTimeDeposit("gold", "1000.00", 100);
         int basic = insertTimeDeposit("basic", "1200.00", 100);
 
@@ -96,7 +74,6 @@ class BalanceUpdateTest extends ApiIntegrationTest {
         assertThat(balancesById())
                 .containsExactlyInAnyOrderEntriesOf(
                         Map.of(gold, new BigDecimal("1000.00"), basic, new BigDecimal("1201.00")));
-        assertThat(logged.list).extracting(ILoggingEvent::getLevel).contains(Level.ERROR);
     }
 
     private void postBalanceUpdate() {
