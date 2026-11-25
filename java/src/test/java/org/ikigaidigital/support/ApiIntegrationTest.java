@@ -1,6 +1,9 @@
 package org.ikigaidigital.support;
 
+import static java.util.stream.Collectors.toMap;
+
 import java.math.BigDecimal;
+import java.util.Map;
 import org.ikigaidigital.adapter.web.api.model.TimeDepositDto;
 import org.ikigaidigital.adapter.web.api.model.TimeDepositPageDto;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,8 +28,8 @@ public abstract class ApiIntegrationTest extends DatabaseIntegrationTest {
     @Autowired
     protected RestTestClient client;
 
-    /** The Balance of the Time Deposit, as {@code GET /v1/time-deposits} returns it. */
-    protected BigDecimal balanceOf(int timeDepositId) {
+    /** Every Time Deposit's Balance by id, from one {@code GET /v1/time-deposits}. */
+    protected Map<Integer, BigDecimal> balancesById() {
         return client
                 .get()
                 .uri("/v1/time-deposits?size=100")
@@ -38,9 +41,6 @@ public abstract class ApiIntegrationTest extends DatabaseIntegrationTest {
                 .getResponseBody()
                 .getItems()
                 .stream()
-                .filter(timeDeposit -> timeDeposit.getId() == timeDepositId)
-                .map(TimeDepositDto::getBalance)
-                .findFirst()
-                .orElseThrow();
+                .collect(toMap(TimeDepositDto::getId, TimeDepositDto::getBalance));
     }
 }

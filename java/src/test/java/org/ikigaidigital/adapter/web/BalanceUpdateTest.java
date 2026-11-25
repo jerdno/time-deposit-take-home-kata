@@ -1,6 +1,5 @@
 package org.ikigaidigital.adapter.web;
 
-import static java.util.stream.Collectors.toMap;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.math.BigDecimal;
@@ -98,9 +97,5 @@ class BalanceUpdateTest extends ApiIntegrationTest {
                 .expectBody(TimeDepositPageDto.class)
                 .returnResult()
                 .getResponseBody();
-    }
-
-    private Map<Integer, BigDecimal> balancesById() {
-        return timeDeposits().getItems().stream().collect(toMap(TimeDepositDto::getId, TimeDepositDto::getBalance));
     }
 }

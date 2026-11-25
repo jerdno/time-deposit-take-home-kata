@@ -2,6 +2,8 @@ package org.ikigaidigital.adapter.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.math.BigDecimal;
+import java.util.Map;
 import org.ikigaidigital.support.ApiIntegrationTest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -24,7 +26,7 @@ class IdempotentBalanceUpdateTest extends ApiIntegrationTest {
         assertThat(postBalanceUpdate()).hasStatus(HttpStatus.NO_CONTENT);
 
         // 1200.00 + 1.00, then 1201.00 + 1.00
-        assertThat(balanceOf(id)).isEqualByComparingTo("1202.00");
+        assertThat(balancesById()).containsExactlyEntriesOf(Map.of(id, new BigDecimal("1202.00")));
     }
 
     @Test
@@ -34,7 +36,7 @@ class IdempotentBalanceUpdateTest extends ApiIntegrationTest {
         assertThat(postBalanceUpdate(KEY)).hasStatus(HttpStatus.NO_CONTENT);
         assertThat(postBalanceUpdate(KEY)).hasStatus(HttpStatus.NO_CONTENT);
 
-        assertThat(balanceOf(id)).isEqualByComparingTo("1201.00");
+        assertThat(balancesById()).containsExactlyEntriesOf(Map.of(id, new BigDecimal("1201.00")));
     }
 
     @ParameterizedTest
@@ -45,7 +47,7 @@ class IdempotentBalanceUpdateTest extends ApiIntegrationTest {
         assertThat(postBalanceUpdate(idempotencyKey))
                 .hasStatus(HttpStatus.BAD_REQUEST)
                 .hasContentType(MediaType.APPLICATION_PROBLEM_JSON);
-        assertThat(balanceOf(id)).isEqualByComparingTo("1200.00");
+        assertThat(balancesById()).containsExactlyEntriesOf(Map.of(id, new BigDecimal("1200.00")));
     }
 
     @Test
@@ -56,7 +58,7 @@ class IdempotentBalanceUpdateTest extends ApiIntegrationTest {
         assertThat(postBalanceUpdate("k".repeat(255))).hasStatus(HttpStatus.NO_CONTENT);
         assertThat(postBalanceUpdate("\"" + "k".repeat(255) + "\"")).hasStatus(HttpStatus.NO_CONTENT);
 
-        assertThat(balanceOf(id)).isEqualByComparingTo("1201.00");
+        assertThat(balancesById()).containsExactlyEntriesOf(Map.of(id, new BigDecimal("1201.00")));
     }
 
     @Test
@@ -67,7 +69,7 @@ class IdempotentBalanceUpdateTest extends ApiIntegrationTest {
         assertThat(postBalanceUpdate(KEY)).hasStatus(HttpStatus.NO_CONTENT);
         assertThat(postBalanceUpdate('"' + KEY + '"')).hasStatus(HttpStatus.NO_CONTENT);
 
-        assertThat(balanceOf(id)).isEqualByComparingTo("1201.00");
+        assertThat(balancesById()).containsExactlyEntriesOf(Map.of(id, new BigDecimal("1201.00")));
     }
 
     @Test
@@ -76,13 +78,13 @@ class IdempotentBalanceUpdateTest extends ApiIntegrationTest {
         failUpdatesOfTimeDepositsWhen("true");
 
         assertThat(postBalanceUpdate(KEY)).hasFailed().failure().cause().isInstanceOf(DataAccessException.class);
-        assertThat(balanceOf(id)).isEqualByComparingTo("1200.00");
+        assertThat(balancesById()).containsExactlyEntriesOf(Map.of(id, new BigDecimal("1200.00")));
 
         dropFailingTrigger();
         assertThat(postBalanceUpdate(KEY)).hasStatus(HttpStatus.NO_CONTENT);
         assertThat(postBalanceUpdate(KEY)).hasStatus(HttpStatus.NO_CONTENT);
 
-        assertThat(balanceOf(id)).isEqualByComparingTo("1201.00");
+        assertThat(balancesById()).containsExactlyEntriesOf(Map.of(id, new BigDecimal("1201.00")));
     }
 
     @AfterEach
