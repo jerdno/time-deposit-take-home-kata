@@ -58,11 +58,11 @@ class BalanceUpdateService implements ApplyBalanceUpdateUseCase {
         List<VersionedTimeDeposit> timeDeposits = loadAllTimeDepositsPort.loadAllTimeDeposits();
         timeDepositCalculator.updateBalance(
                 timeDeposits.stream().map(VersionedTimeDeposit::timeDeposit).toList());
-        if (save(
-                timeDeposits.stream()
-                        .filter(VersionedTimeDeposit::balanceChanged)
-                        .toList(),
-                idempotencyKey)) {
+        List<VersionedTimeDeposit> changed = timeDeposits.stream()
+                .filter(VersionedTimeDeposit::balanceChanged)
+                .toList();
+        boolean saved = save(changed, idempotencyKey);
+        if (saved) {
             log.info("Balance Update finished, {} Time Deposits updated", timeDeposits.size());
         } else {
             logSkipped(idempotencyKey.orElseThrow());
@@ -74,13 +74,13 @@ class BalanceUpdateService implements ApplyBalanceUpdateUseCase {
     // committed first.
     private boolean save(List<VersionedTimeDeposit> changed, Optional<String> idempotencyKey) {
         try {
-            return Boolean.TRUE.equals(transactionTemplate.execute(status -> {
+            return transactionTemplate.execute(status -> {
                 if (idempotencyKey.isPresent() && !claimIdempotencyKeyPort.claim(idempotencyKey.get())) {
                     return false;
                 }
                 saveBalancesPort.saveBalances(changed);
                 return true;
-            }));
+            });
         } catch (OptimisticLockingFailureException e) {
             throw new ConcurrentBalanceUpdateException(e);
         }
