@@ -32,15 +32,13 @@ public class TimeDepositCalculator {
             double interest = roundToCent(monthlyInterest);
             timeDeposit.setBalance(timeDeposit.getBalance() + interest);
             // Balances and interest are amounts of money: DEBUG only.
-            if (log.isDebugEnabled()) {
-                log.debug(
-                        "Time Deposit {}: Plan Type {}, Days {}, interest {}, Balance {}",
-                        timeDeposit.getId(),
-                        timeDeposit.getPlanType(),
-                        timeDeposit.getDays(),
-                        inCents(interest),
-                        inCents(timeDeposit.getBalance()));
-            }
+            log.debug(
+                    "Time Deposit {}: Plan Type {}, Days {}, interest {}, Balance {}",
+                    timeDeposit.getId(),
+                    timeDeposit.getPlanType(),
+                    timeDeposit.getDays(),
+                    inCents(interest),
+                    inCents(timeDeposit.getBalance()));
         }
     }
 
