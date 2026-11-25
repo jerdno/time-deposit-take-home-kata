@@ -11,14 +11,14 @@ If either doesn't exist, **proceed silently**. Don't flag its absence; don't sug
 
 ## File structure
 
-One domain shared by every language implementation:
+One domain, one implementation:
 
 ```
 /
 ├── GLOSSARY.md
 ├── docs/adr/
-│   └── 0001-example-decision.md
-├── c#/  java/  kotlin/  python/  typescript/
+│   └── 0001-optimistic-locking-for-the-balance-update.md
+└── java/
 ```
 
 ## Use the glossary's vocabulary
