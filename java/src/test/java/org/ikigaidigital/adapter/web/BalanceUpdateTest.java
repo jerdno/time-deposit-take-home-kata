@@ -75,6 +75,20 @@ class BalanceUpdateTest extends ApiIntegrationTest {
                         Map.of(gold, new BigDecimal("1000.00"), basic, new BigDecimal("1201.00")));
     }
 
+    @Test
+    void timeDepositThatEarnsNoInterestKeepsItsStoredBalanceExactly() {
+        // 17 significant digits: more than a Double holds, so 10000000000000000.01 would become ...00 through one.
+        int gold = insertTimeDeposit("gold", "10000000000000000.01", 100);
+        int notYetEligible = insertTimeDeposit("basic", "10000000000000000.01", 30);
+
+        postBalanceUpdate();
+
+        assertThat(balancesById())
+                .containsExactlyInAnyOrderEntriesOf(Map.of(
+                        gold, new BigDecimal("10000000000000000.01"),
+                        notYetEligible, new BigDecimal("10000000000000000.01")));
+    }
+
     private void postBalanceUpdate() {
         client.post()
                 .uri("/v1/time-deposits/balance-updates")

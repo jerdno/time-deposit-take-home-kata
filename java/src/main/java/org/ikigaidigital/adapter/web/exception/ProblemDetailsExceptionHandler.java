@@ -6,6 +6,8 @@ import jakarta.validation.Path;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 import org.ikigaidigital.application.port.in.exception.ConcurrentBalanceUpdateException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -21,6 +23,8 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
  */
 @RestControllerAdvice
 class ProblemDetailsExceptionHandler extends ResponseEntityExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(ProblemDetailsExceptionHandler.class);
 
     /**
      * The generated API interface is annotated {@code @Validated}, so the constraints from the contract (such as
@@ -39,6 +43,17 @@ class ProblemDetailsExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(ConcurrentBalanceUpdateException.class)
     ProblemDetail handleConcurrentBalanceUpdate(ConcurrentBalanceUpdateException exception) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, exception.getMessage());
+    }
+
+    /**
+     * Any other error, for example a database failure. It is logged here, while the request still runs, so the log
+     * line carries the request's trace id; an exception that escaped to the servlet container would be logged after
+     * the trace had ended.
+     */
+    @ExceptionHandler(Exception.class)
+    ProblemDetail handleUnexpected(Exception exception) {
+        log.error("Request failed with an unexpected error", exception);
+        return ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred.");
     }
 
     // The property path is "getTimeDeposits.size"; the client only knows the parameter name.
