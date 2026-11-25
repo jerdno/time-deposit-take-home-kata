@@ -15,6 +15,11 @@ class IdempotencyKeyPersistenceAdapter implements ClaimIdempotencyKeyPort {
         this.idempotencyKeys = idempotencyKeys;
     }
 
+    @Override
+    public boolean isClaimed(String idempotencyKey) {
+        return idempotencyKeys.existsById(idempotencyKey);
+    }
+
     // MANDATORY: a key stored in a transaction of its own would survive a failed piece of work and block its retry.
     @Override
     @Transactional(propagation = Propagation.MANDATORY)

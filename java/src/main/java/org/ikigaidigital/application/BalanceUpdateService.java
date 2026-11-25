@@ -11,8 +11,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 class BalanceUpdateService implements ApplyBalanceUpdateUseCase {
@@ -22,17 +20,17 @@ class BalanceUpdateService implements ApplyBalanceUpdateUseCase {
     private final LoadAllTimeDepositsPort loadAllTimeDepositsPort;
     private final SaveBalancesPort saveBalancesPort;
     private final TimeDepositCalculator timeDepositCalculator;
-    private final TransactionTemplate transactionTemplate;
+    private final WriteTransaction writeTransaction;
 
     BalanceUpdateService(
             LoadAllTimeDepositsPort loadAllTimeDepositsPort,
             SaveBalancesPort saveBalancesPort,
             TimeDepositCalculator timeDepositCalculator,
-            PlatformTransactionManager transactionManager) {
+            WriteTransaction writeTransaction) {
         this.loadAllTimeDepositsPort = loadAllTimeDepositsPort;
         this.saveBalancesPort = saveBalancesPort;
         this.timeDepositCalculator = timeDepositCalculator;
-        this.transactionTemplate = new TransactionTemplate(transactionManager);
+        this.writeTransaction = writeTransaction;
     }
 
     @Override
@@ -46,7 +44,7 @@ class BalanceUpdateService implements ApplyBalanceUpdateUseCase {
 
     private void save(List<VersionedTimeDeposit> changed) {
         try {
-            transactionTemplate.executeWithoutResult(status -> saveBalancesPort.saveBalances(changed));
+            writeTransaction.run(() -> saveBalancesPort.saveBalances(changed));
         } catch (OptimisticLockingFailureException e) {
             throw new ConcurrentBalanceUpdateException(e);
         }

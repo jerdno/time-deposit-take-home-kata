@@ -9,8 +9,8 @@ import org.springframework.stereotype.Component;
 
 /**
  * Makes an endpoint safe to retry with an {@code Idempotency-Key} request header. An endpoint opts in by passing the
- * header and its work: without a key the work simply runs, with one it runs at most once per key
- * (docs/adr/0002-idempotency-key-for-the-balance-update.md).
+ * header and its work, a use case call that writes through the application's {@code WriteTransaction}: without a key
+ * the work simply runs, with one it runs at most once per key (docs/adr/0002-idempotency-key-for-the-balance-update.md).
  */
 @Component
 class IdempotentRequests {

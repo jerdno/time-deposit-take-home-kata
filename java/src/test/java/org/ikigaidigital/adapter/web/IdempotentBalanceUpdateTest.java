@@ -168,7 +168,7 @@ class IdempotentBalanceUpdateTest extends ApiIntegrationTest {
         String firstKey = "first-key";
         String secondKey = "second-key";
 
-        // Different keys: both claim their key, load the same versions, and race to save (ADR 0001).
+        // Different keys: both load the same versions, then claim their key and race to save (ADR 0001).
         List<MvcTestResult> results = runTwoCallsThatOverlap(firstKey, secondKey, Map.of(UPDATE, 2));
 
         assertThat(results)
@@ -187,9 +187,10 @@ class IdempotentBalanceUpdateTest extends ApiIntegrationTest {
     }
 
     /**
-     * Makes two calls overlap deterministically. A SHARE lock on {@code time_deposits} lets a Balance Update load the
-     * Time Deposits but blocks its UPDATE, so its transaction stays open with its key claimed; a call with the same key
-     * waits on that key instead. Once the expected statements wait, the lock is released.
+     * Makes two calls overlap deterministically. Both calls load the Time Deposits and compute the interest before
+     * their write transaction. A SHARE lock on {@code time_deposits} lets a call's write transaction claim its key and
+     * find the Time Deposits but blocks its UPDATE, so that transaction stays open with its key claimed; a call with
+     * the same key waits on that key instead. Once the expected statements wait, the lock is released.
      *
      * @param waiting how many statements matching each pattern must be waiting on a lock before the release
      */
