@@ -37,6 +37,9 @@ paths:
             maximum: 100
             default: 20
       responses:
+        # Assumption (ticket 5): the README's "a list of all time deposits" with five fields says what each Time
+        # Deposit must contain, not that the response is a bare array. The Time Deposits come a page at a time, in an
+        # envelope, because a response holding every Time Deposit of a bank has no upper size.
         '200':
           description: A page of Time Deposits.
           content:
