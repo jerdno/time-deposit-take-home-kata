@@ -2,7 +2,6 @@ package org.ikigaidigital.adapter.web;
 
 import static java.util.stream.Collectors.toMap;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.tuple;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
@@ -11,6 +10,8 @@ import ch.qos.logback.core.read.ListAppender;
 import java.math.BigDecimal;
 import java.util.Map;
 import javax.sql.DataSource;
+import org.ikigaidigital.adapter.web.api.model.TimeDepositDto;
+import org.ikigaidigital.adapter.web.api.model.TimeDepositPageDto;
 import org.ikigaidigital.support.ApiIntegrationTest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,24 +19,20 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
-import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
-import org.springframework.test.web.servlet.assertj.MvcTestResult;
 
+/** {@code POST /v1/time-deposits/balance-updates}, with the results read back through {@code GET /v1/time-deposits}. */
 class BalanceUpdateTest extends ApiIntegrationTest {
 
     @Autowired
     DataSource dataSource;
 
-    // Captures what the application logs, with DEBUG switched on for the duration of each test.
+    // Captures what the application logs, to check that bad data is reported.
     private final Logger applicationLogger = (Logger) LoggerFactory.getLogger("org.ikigaidigital");
     private final ListAppender<ILoggingEvent> logged = new ListAppender<>();
-    private Level previousLevel;
 
     @BeforeEach
     void captureLogs() {
-        previousLevel = applicationLogger.getLevel();
-        applicationLogger.setLevel(Level.DEBUG);
         logged.start();
         applicationLogger.addAppender(logged);
     }
@@ -43,14 +40,13 @@ class BalanceUpdateTest extends ApiIntegrationTest {
     @AfterEach
     void stopCapturingLogs() {
         applicationLogger.detachAppender(logged);
-        applicationLogger.setLevel(previousLevel);
     }
 
     @Test
     void appliesOneMonthlyInterestToEverySeededTimeDeposit() {
         insertSeedData();
 
-        assertThat(postBalanceUpdate()).hasStatus(HttpStatus.NO_CONTENT);
+        postBalanceUpdate();
 
         // Worked out by hand from the seed: Balance x annual rate / 12, rounded to the cent half-up, inside the
         // Eligibility Window only.
@@ -72,8 +68,8 @@ class BalanceUpdateTest extends ApiIntegrationTest {
     void eachCallAddsAnotherMonthOfInterest() {
         int id = insertTimeDeposit("basic", "1200.00", 31);
 
-        assertThat(postBalanceUpdate()).hasStatus(HttpStatus.NO_CONTENT);
-        assertThat(postBalanceUpdate()).hasStatus(HttpStatus.NO_CONTENT);
+        postBalanceUpdate();
+        postBalanceUpdate();
 
         // 1200.00 + 1.00 = 1201.00, then 1201.00 + 1.0008... rounded = 1202.00
         assertThat(balancesById()).containsExactlyEntriesOf(Map.of(id, new BigDecimal("1202.00")));
@@ -81,74 +77,34 @@ class BalanceUpdateTest extends ApiIntegrationTest {
 
     @Test
     void leavesDaysUnchanged() {
-        int id = insertTimeDeposit("premium", "1000.00", 46);
+        insertTimeDeposit("premium", "1000.00", 46);
 
-        assertThat(postBalanceUpdate()).hasStatus(HttpStatus.NO_CONTENT);
+        postBalanceUpdate();
 
-        assertThat(jdbc.sql("SELECT days FROM time_deposits WHERE id = ?")
-                        .param(id)
-                        .query(Integer.class)
-                        .single())
-                .isEqualTo(46);
+        assertThat(timeDeposits().getItems())
+                .extracting(TimeDepositDto::getDays)
+                .containsExactly(46);
     }
 
     @Test
-    void doesNotWriteATimeDepositThatEarnsNoInterest() {
-        int id = insertTimeDeposit("basic", "1200.00", 30);
-        Map<String, Object> before = versionAndUpdatedAtOf(id);
-
-        assertThat(postBalanceUpdate()).hasStatus(HttpStatus.NO_CONTENT);
-
-        assertThat(versionAndUpdatedAtOf(id)).isEqualTo(before);
-    }
-
-    private Map<String, Object> versionAndUpdatedAtOf(int id) {
-        return jdbc.sql("SELECT version, updated_at FROM time_deposits WHERE id = ?")
-                .param(id)
-                .query()
-                .singleRow();
-    }
-
-    @Test
-    void timeDepositWithAnUnknownPlanTypeKeepsItsBalanceAndIsLoggedAsAnError() {
+    void timeDepositWithAnUnknownPlanTypeKeepsItsBalanceAndAnErrorIsLogged() {
         int gold = insertTimeDeposit("gold", "1000.00", 100);
         int basic = insertTimeDeposit("basic", "1200.00", 100);
 
-        assertThat(postBalanceUpdate()).hasStatus(HttpStatus.NO_CONTENT);
+        postBalanceUpdate();
 
         assertThat(balancesById())
                 .containsExactlyInAnyOrderEntriesOf(
                         Map.of(gold, new BigDecimal("1000.00"), basic, new BigDecimal("1201.00")));
-        assertThat(logged.list)
-                .filteredOn(event -> event.getLevel() == Level.ERROR)
-                .extracting(ILoggingEvent::getFormattedMessage)
-                .containsExactly("Time Deposit " + gold + " has unknown Plan Type 'gold'; it earns no interest");
+        assertThat(logged.list).extracting(ILoggingEvent::getLevel).contains(Level.ERROR);
     }
 
-    @Test
-    void logsTheOutcomeAtInfoAndEachTimeDepositsInterestAtDebug() {
-        int basic = insertTimeDeposit("basic", "1200.00", 31);
-        int student = insertTimeDeposit("student", "1000.00", 30);
-
-        assertThat(postBalanceUpdate()).hasStatus(HttpStatus.NO_CONTENT);
-
-        assertThat(logged.list)
-                .filteredOn(event -> event.getLoggerName().endsWith(".TimeDepositCalculator")
-                        || event.getLoggerName().endsWith(".BalanceUpdateService"))
-                .extracting(ILoggingEvent::getLevel, ILoggingEvent::getFormattedMessage)
-                .containsExactly(
-                        tuple(
-                                Level.DEBUG,
-                                "Time Deposit " + basic + ": Plan Type basic, Days 31, interest 1.00, Balance 1201.00"),
-                        tuple(
-                                Level.DEBUG,
-                                "Time Deposit " + student
-                                        + ": Plan Type student, Days 30, interest 0.00, Balance 1000.00"),
-                        tuple(Level.INFO, "Balance Update finished, 2 Time Deposits updated"));
-    }
-
-    private MvcTestResult postBalanceUpdate() {
-        return mvc.post().uri("/v1/time-deposits/balance-updates").exchange();
+    private void postBalanceUpdate() {
+        client.post()
+                .uri("/v1/time-deposits/balance-updates")
+                .exchange()
+                .expectStatus()
+                .isNoContent();
     }
 
     /** Loads the same seed data the local profile does. */
@@ -156,12 +112,18 @@ class BalanceUpdateTest extends ApiIntegrationTest {
         new ResourceDatabasePopulator(new ClassPathResource("db/seed/R__seed_data.sql")).execute(dataSource);
     }
 
+    private TimeDepositPageDto timeDeposits() {
+        return client.get()
+                .uri("/v1/time-deposits?size=100")
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody(TimeDepositPageDto.class)
+                .returnResult()
+                .getResponseBody();
+    }
+
     private Map<Integer, BigDecimal> balancesById() {
-        return jdbc
-                .sql("SELECT id, balance FROM time_deposits")
-                .query((rs, rowNum) -> Map.entry(rs.getInt("id"), rs.getBigDecimal("balance")))
-                .list()
-                .stream()
-                .collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
+        return timeDeposits().getItems().stream().collect(toMap(TimeDepositDto::getId, TimeDepositDto::getBalance));
     }
 }

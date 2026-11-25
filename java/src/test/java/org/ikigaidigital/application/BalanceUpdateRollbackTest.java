@@ -5,13 +5,14 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.math.BigDecimal;
 import org.ikigaidigital.application.port.in.ApplyBalanceUpdateUseCase;
-import org.ikigaidigital.support.ApiIntegrationTest;
+import org.ikigaidigital.support.DatabaseIntegrationTest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 
-class BalanceUpdateRollbackTest extends ApiIntegrationTest {
+/** A Balance Update saves all its Balances in one transaction: a failure partway through leaves every one unchanged. */
+class BalanceUpdateRollbackTest extends DatabaseIntegrationTest {
 
     @Autowired
     ApplyBalanceUpdateUseCase balanceUpdate;
