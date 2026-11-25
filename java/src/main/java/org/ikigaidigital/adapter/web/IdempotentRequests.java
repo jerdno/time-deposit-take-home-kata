@@ -39,8 +39,6 @@ class IdempotentRequests {
         }
     }
 
-    // Assumption (ticket 11): the IETF Idempotency-Key draft defines the header as a Structured Field string, sent in
-    // double quotes; most clients send the bare value. Both forms name the same key, stored without the quotes.
     private static String unquote(String idempotencyKey) {
         return idempotencyKey.startsWith("\"")
                 ? idempotencyKey.substring(1, idempotencyKey.length() - 1)
