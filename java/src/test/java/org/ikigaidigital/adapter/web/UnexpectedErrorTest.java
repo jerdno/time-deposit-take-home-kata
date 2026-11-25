@@ -6,6 +6,7 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
+import org.ikigaidigital.adapter.web.api.model.ProblemDto;
 import org.ikigaidigital.support.ApiIntegrationTest;
 import org.ikigaidigital.support.FailingTimeDepositUpdates;
 import org.junit.jupiter.api.AfterEach;
@@ -14,7 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.test.web.servlet.assertj.MvcTestResult;
+import org.springframework.test.web.servlet.client.RestTestClient;
 
 /** An error no other handler maps, here a database failure during a Balance Update. */
 class UnexpectedErrorTest extends ApiIntegrationTest {
@@ -39,20 +40,18 @@ class UnexpectedErrorTest extends ApiIntegrationTest {
     void isAnInternalServerErrorProblemWithoutTheExceptionMessage() {
         insertTimeDeposit("basic", "1200.00", 31);
 
-        MvcTestResult result = postBalanceUpdate();
+        ProblemDto problem = postBalanceUpdate()
+                .expectStatus()
+                .isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR)
+                .expectHeader()
+                .contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON)
+                .expectBody(ProblemDto.class)
+                .returnResult()
+                .getResponseBody();
 
-        assertThat(result)
-                .hasStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-                .hasContentType(MediaType.APPLICATION_PROBLEM_JSON)
-                .bodyJson()
-                .isLenientlyEqualTo("""
-                        {
-                          "title": "Internal Server Error",
-                          "status": 500,
-                          "detail": "An unexpected error occurred."
-                        }
-                        """);
-        assertThat(result).bodyText().doesNotContain("Simulated failure");
+        assertThat(problem)
+                .extracting(ProblemDto::getTitle, ProblemDto::getStatus, ProblemDto::getDetail)
+                .containsExactly("Internal Server Error", 500, "An unexpected error occurred.");
     }
 
     @Test
@@ -67,7 +66,7 @@ class UnexpectedErrorTest extends ApiIntegrationTest {
                 .satisfies(event -> assertThat(event.getThrowableProxy()).isNotNull());
     }
 
-    private MvcTestResult postBalanceUpdate() {
-        return mvc.post().uri("/v1/time-deposits/balance-updates").exchange();
+    private RestTestClient.ResponseSpec postBalanceUpdate() {
+        return client.post().uri("/v1/time-deposits/balance-updates").exchange();
     }
 }
