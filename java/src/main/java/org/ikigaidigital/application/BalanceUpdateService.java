@@ -4,7 +4,6 @@ import java.util.List;
 import org.ikigaidigital.TimeDepositCalculator;
 import org.ikigaidigital.application.model.VersionedTimeDeposit;
 import org.ikigaidigital.application.port.in.ApplyBalanceUpdateUseCase;
-import org.ikigaidigital.application.port.in.PreparedBalanceUpdate;
 import org.ikigaidigital.application.port.in.exception.ConcurrentBalanceUpdateException;
 import org.ikigaidigital.application.port.out.LoadAllTimeDepositsPort;
 import org.ikigaidigital.application.port.out.SaveBalancesPort;
@@ -38,23 +37,19 @@ class BalanceUpdateService implements ApplyBalanceUpdateUseCase {
 
     // Assumption (ticket 7): every call adds a month of interest. Triggering it once a month is the caller's job
     // (e.g. an external scheduler); retry safety is ticket 11.
+    //
+    // No transaction of ours around the load and the calculation: the load runs in Spring Data's own short read-only
+    // one, and the calculation runs with no transaction open, so it holds no connection. Only the save opens one
+    // (docs/adr/0001-optimistic-locking-for-the-balance-update.md).
     @Override
     public void applyBalanceUpdate() {
-        prepareBalanceUpdate().apply();
-    }
-
-    // No transaction of ours: the load runs in Spring Data's own short read-only one, and the calculation runs with no
-    // transaction open, so it holds no connection (docs/adr/0001-optimistic-locking-for-the-balance-update.md).
-    @Override
-    public PreparedBalanceUpdate prepareBalanceUpdate() {
         List<VersionedTimeDeposit> timeDeposits = loadAllTimeDepositsPort.loadAllTimeDeposits();
         timeDepositCalculator.updateBalance(
                 timeDeposits.stream().map(VersionedTimeDeposit::timeDeposit).toList());
-        return () -> save(timeDeposits);
+        save(timeDeposits);
     }
 
-    // One short transaction for all the writes: every Balance is saved, or none is. It joins the caller's transaction
-    // when there is one (TransactionTemplate's default PROPAGATION_REQUIRED).
+    // One short transaction for all the writes: every Balance is saved, or none is.
     private void save(List<VersionedTimeDeposit> timeDeposits) {
         try {
             transactionTemplate.executeWithoutResult(status -> saveBalancesPort.saveBalances(timeDeposits));

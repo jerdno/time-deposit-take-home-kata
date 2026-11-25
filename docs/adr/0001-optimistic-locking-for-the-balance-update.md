@@ -11,7 +11,6 @@ Two overlapping calls to `POST /v1/time-deposits/balance-updates` must not silen
   - The application opens no transaction around the load. `TimeDepositJpaRepository.findAll` runs in the short read-only transaction Spring Data's `SimpleJpaRepository` gives it, which ends when the query returns. Each Time Deposit leaves the persistence adapter with the `version` it was read at, in a `VersionedTimeDeposit`; the domain `TimeDeposit` has no version and does not change.
   - `TimeDepositCalculator.updateBalance` runs on the plain `TimeDeposit`s with no transaction open, so the load and the save are separate transactions.
   - The save is the only transaction the application opens. It finds the Time Deposits again, compares each `version` with the loaded one and throws an `ObjectOptimisticLockingFailureException` if any differs, before writing anything. Then it changes the Balances, and JPA `@Version` adds `WHERE version = ?` to each UPDATE, which catches a change that commits between the find and the flush. Both checks use JPA as it comes, with no hand-written SQL.
-  - The use case has two phases, `prepareBalanceUpdate` (load and calculate) and `PreparedBalanceUpdate.apply` (save), so another caller can run its own writes in the save transaction (the idempotency key of ticket 11 does). `applyBalanceUpdate` is the two in a row.
 
 ## Consequences
 

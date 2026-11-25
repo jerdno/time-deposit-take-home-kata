@@ -6,17 +6,11 @@ import org.ikigaidigital.application.port.in.exception.ConcurrentBalanceUpdateEx
 public interface ApplyBalanceUpdateUseCase {
 
     /**
-     * Runs one Balance Update: {@link #prepareBalanceUpdate()}, then {@link PreparedBalanceUpdate#apply()}.
+     * Runs one Balance Update. It loads every Time Deposit and computes its new Balance with no transaction of its own
+     * open, then saves every Balance in one short transaction: all of them, or none.
      *
      * @throws ConcurrentBalanceUpdateException if a concurrent Balance Update changed a Time Deposit first; nothing
      *     was applied
      */
     void applyBalanceUpdate();
-
-    /**
-     * The first of a Balance Update's two phases: loads every Time Deposit and computes its new Balance. It opens no
-     * transaction around them, and none is open while the Balances are computed. Nothing is saved until {@link
-     * PreparedBalanceUpdate#apply()}, the second phase, which writes every Balance in one short transaction.
-     */
-    PreparedBalanceUpdate prepareBalanceUpdate();
 }
