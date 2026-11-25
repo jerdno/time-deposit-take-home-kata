@@ -5,7 +5,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.math.BigDecimal;
 import java.util.Map;
 import org.ikigaidigital.support.ApiIntegrationTest;
+import org.ikigaidigital.support.FailingTimeDepositUpdates;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -17,6 +19,13 @@ import org.springframework.test.web.servlet.assertj.MvcTestResult;
 class IdempotentBalanceUpdateTest extends ApiIntegrationTest {
 
     private static final String KEY = "8e03978e-40d5-43e8-bc93-6894a57f9324";
+
+    private FailingTimeDepositUpdates failingUpdates;
+
+    @BeforeEach
+    void prepareFailingUpdates() {
+        failingUpdates = new FailingTimeDepositUpdates(jdbc);
+    }
 
     @Test
     void withoutAKeyEveryCallAddsInterest() {
@@ -75,12 +84,12 @@ class IdempotentBalanceUpdateTest extends ApiIntegrationTest {
     @Test
     void aFailedCallWithAKeyStoresNoKeySoItsRetryAddsInterestOnce() {
         int id = insertTimeDeposit("basic", "1200.00", 31);
-        failUpdatesOfTimeDepositsWhen("true");
+        failingUpdates.failWhen("true");
 
         assertThat(postBalanceUpdate(KEY)).hasFailed().failure().cause().isInstanceOf(DataAccessException.class);
         assertThat(balancesById()).containsExactlyEntriesOf(Map.of(id, new BigDecimal("1200.00")));
 
-        dropFailingTrigger();
+        failingUpdates.remove();
         assertThat(postBalanceUpdate(KEY)).hasStatus(HttpStatus.NO_CONTENT);
         assertThat(postBalanceUpdate(KEY)).hasStatus(HttpStatus.NO_CONTENT);
 
@@ -88,26 +97,9 @@ class IdempotentBalanceUpdateTest extends ApiIntegrationTest {
     }
 
     @AfterEach
-    void dropFailingTrigger() {
-        jdbc.sql("DROP TRIGGER IF EXISTS fail_balance_update ON time_deposits").update();
-        jdbc.sql("DROP FUNCTION IF EXISTS fail_balance_update()").update();
-    }
-
-    /** The database rejects an UPDATE of a Time Deposit while the condition holds, as if a Balance Update failed. */
-    private void failUpdatesOfTimeDepositsWhen(String condition) {
-        jdbc.sql("""
-                        CREATE FUNCTION fail_balance_update() RETURNS trigger LANGUAGE plpgsql AS $$
-                        BEGIN
-                            IF %s THEN
-                                RAISE EXCEPTION 'Simulated failure updating Time Deposit %%', OLD.id;
-                            END IF;
-                            RETURN NEW;
-                        END
-                        $$
-                        """.formatted(condition)).update();
-        jdbc.sql("CREATE TRIGGER fail_balance_update BEFORE UPDATE ON time_deposits FOR EACH ROW"
-                        + " EXECUTE FUNCTION fail_balance_update()")
-                .update();
+    void removeFailingUpdates() {
+        failingUpdates.remove();
+        jdbc.sql("DROP SEQUENCE IF EXISTS fail_balance_update_once").update();
     }
 
     private MvcTestResult postBalanceUpdate() {
