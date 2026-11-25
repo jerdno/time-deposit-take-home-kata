@@ -4,7 +4,7 @@
 - **Swagger UI**: http://localhost:8080/swagger-ui.html, driven with the session's browser tools.
 - **Auth**: not gated.
 - **Wiring**: PostgreSQL only, defined in `compose.yaml`; app datasource defaults in `java/src/main/resources/application-local.yaml`. No external providers. The database has no host port; reach it with `docker compose exec postgres psql -U time_deposits`.
-- **Logs**: `docker compose logs app`. Every line carries the request id from the `X-Request-Id` response header.
+- **Logs**: `docker compose logs app`. Every line of a request carries its trace id, the one in the `X-Trace-Id` response header, as `[traceId-spanId]`.
 
 ## Gotchas
 
