@@ -47,7 +47,7 @@ class BalanceUpdateService implements ApplyBalanceUpdateUseCase {
         timeDepositCalculator.updateBalance(
                 timeDeposits.stream().map(VersionedTimeDeposit::timeDeposit).toList());
         // A Time Deposit the calculator left unchanged (no interest: outside its Eligibility Window, or an unknown Plan
-        // Type) is not saved, so it is not written at all.
+        // Type) has nothing to save, so it is not written at all.
         save(timeDeposits.stream().filter(VersionedTimeDeposit::balanceChanged).toList());
         // Assumption (ticket 7): N counts every Time Deposit the Balance Update went through, including those that
         // earned no interest (outside their Eligibility Window, or with an unknown Plan Type).

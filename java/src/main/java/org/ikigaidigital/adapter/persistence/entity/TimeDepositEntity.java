@@ -7,13 +7,12 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
-import jakarta.persistence.Version;
 import java.math.BigDecimal;
 import java.time.Instant;
 
 @Entity
 @Table(name = "time_deposits")
-public class TimeDepositEntity {
+public class TimeDepositEntity extends VersionedEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -28,9 +27,6 @@ public class TimeDepositEntity {
     @Column(nullable = false, precision = 19, scale = 2)
     private BigDecimal balance;
 
-    @Version
-    private long version;
-
     @Column(name = "created_at", insertable = false, updatable = false)
     private Instant createdAt;
 
@@ -39,24 +35,12 @@ public class TimeDepositEntity {
 
     protected TimeDepositEntity() {}
 
-    /**
-     * A detached Time Deposit to save with {@code save}/{@code saveAll}, which merges it: JPA reads the row, throws an
-     * optimistic locking failure if its {@code version} is no longer this one, and adds {@code WHERE version = ?} to
-     * the UPDATE.
-     */
-    public TimeDepositEntity(Integer id, String planType, int days, BigDecimal balance, long version) {
-        this.id = id;
-        this.planType = planType;
-        this.days = days;
-        this.balance = balance;
-        this.version = version;
-    }
-
     @PreUpdate
     void touchUpdatedAt() {
         updatedAt = Instant.now();
     }
 
+    @Override
     public Integer getId() {
         return id;
     }
@@ -73,7 +57,9 @@ public class TimeDepositEntity {
         return balance;
     }
 
-    public long getVersion() {
-        return version;
+    /** Changes the Balance, if the Time Deposit is still at the version the new Balance was computed from. */
+    public void changeBalance(BigDecimal balance, ExpectedVersion expectedVersion) {
+        requireVersion(expectedVersion);
+        this.balance = balance;
     }
 }

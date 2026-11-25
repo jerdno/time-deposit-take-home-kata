@@ -1,15 +1,19 @@
 package org.ikigaidigital.adapter.persistence;
 
+import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
 import java.util.Map;
 import org.ikigaidigital.TimeDeposit;
+import org.ikigaidigital.adapter.persistence.entity.ExpectedVersion;
 import org.ikigaidigital.adapter.persistence.entity.TimeDepositEntity;
+import org.ikigaidigital.adapter.persistence.entity.VersionedEntity;
 import org.ikigaidigital.adapter.persistence.entity.WithdrawalEntity;
 import org.ikigaidigital.adapter.persistence.repository.TimeDepositJpaRepository;
 import org.ikigaidigital.adapter.persistence.repository.TimeDepositJpaRepository.TimeDepositWithTotal;
@@ -24,6 +28,7 @@ import org.ikigaidigital.application.port.out.LoadTimeDepositPagePort;
 import org.ikigaidigital.application.port.out.SaveBalancesPort;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -96,33 +101,30 @@ class TimeDepositPersistenceAdapter implements LoadTimeDepositPagePort, LoadAllT
     }
 
     /**
-     * Saves each Time Deposit as a detached entity carrying the {@code version} it was loaded at; {@code saveAll}
-     * merges them. For each one JPA reads the row and throws an {@link
-     * org.springframework.dao.OptimisticLockingFailureException} if its {@code version} changed since the load, and
-     * the UPDATE carries {@code WHERE version = <loaded version>}, which catches a change that commits after that read.
-     *
-     * <p>Cost: merge reads the rows one by one, so a save makes one SELECT and one UPDATE per Time Deposit. Without
-     * JDBC batching the UPDATEs go one by one as well, so this is at most about twice the round trips of the UPDATEs
-     * alone. If JDBC batching is switched on, a {@code findAllById} before {@code saveAll} would let merge find the rows
-     * already loaded.
+     * Finds the Time Deposits again in the caller's transaction and changes only their Balance, so columns the domain
+     * does not carry keep their stored values. {@link TimeDepositEntity#changeBalance} first checks that each one is
+     * still at the {@code version} it was loaded at, and JPA {@code @Version} adds {@code WHERE version = ?} to each
+     * UPDATE, which catches a change that commits after the find ({@link VersionedEntity}).
      */
     @Override
     @Transactional(propagation = Propagation.MANDATORY)
     public void saveBalances(List<VersionedTimeDeposit> updatedTimeDeposits) {
-        timeDeposits.saveAll(updatedTimeDeposits.stream()
-                .map(TimeDepositPersistenceAdapter::toEntity)
-                .toList());
+        Map<Integer, TimeDepositEntity> entitiesById = timeDeposits
+                .findAllById(updatedTimeDeposits.stream()
+                        .map(updated -> updated.timeDeposit().getId())
+                        .toList())
+                .stream()
+                .collect(toMap(TimeDepositEntity::getId, identity()));
+        for (VersionedTimeDeposit updated : updatedTimeDeposits) {
+            TimeDeposit timeDeposit = updated.timeDeposit();
+            TimeDepositEntity entity = entitiesById.get(timeDeposit.getId());
+            if (entity == null) {
+                // Deleted since the load.
+                throw new ObjectOptimisticLockingFailureException(TimeDepositEntity.class, timeDeposit.getId());
+            }
+            entity.changeBalance(roundToCent(timeDeposit.getBalance()), new ExpectedVersion(updated.version()));
+        }
         timeDeposits.flush();
-    }
-
-    private static TimeDepositEntity toEntity(VersionedTimeDeposit updated) {
-        TimeDeposit timeDeposit = updated.timeDeposit();
-        return new TimeDepositEntity(
-                timeDeposit.getId(),
-                timeDeposit.getPlanType(),
-                timeDeposit.getDays(),
-                roundToCent(timeDeposit.getBalance()),
-                updated.version());
     }
 
     // The domain keeps the Balance in a Double; rounding to the cent, half-up, removes its floating-point noise
