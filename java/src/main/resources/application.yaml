@@ -22,3 +22,17 @@ springdoc:
 server:
   mime-mappings:
     yaml: application/yaml
+management:
+  # Tracing is used only to correlate log lines; nothing is sent to an OpenTelemetry collector.
+  otlp:
+    metrics:
+      export:
+        enabled: false
+  tracing:
+    export:
+      otlp:
+        enabled: false
+  logging:
+    export:
+      otlp:
+        enabled: false
