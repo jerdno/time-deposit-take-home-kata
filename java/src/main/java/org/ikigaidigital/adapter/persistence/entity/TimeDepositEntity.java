@@ -39,6 +39,19 @@ public class TimeDepositEntity {
 
     protected TimeDepositEntity() {}
 
+    /**
+     * A detached Time Deposit to save with {@code save}/{@code saveAll}, which merges it: JPA reads the row, throws an
+     * optimistic locking failure if its {@code version} is no longer this one, and adds {@code WHERE version = ?} to
+     * the UPDATE.
+     */
+    public TimeDepositEntity(Integer id, String planType, int days, BigDecimal balance, long version) {
+        this.id = id;
+        this.planType = planType;
+        this.days = days;
+        this.balance = balance;
+        this.version = version;
+    }
+
     @PreUpdate
     void touchUpdatedAt() {
         updatedAt = Instant.now();
@@ -62,9 +75,5 @@ public class TimeDepositEntity {
 
     public long getVersion() {
         return version;
-    }
-
-    public void changeBalance(BigDecimal balance) {
-        this.balance = balance;
     }
 }

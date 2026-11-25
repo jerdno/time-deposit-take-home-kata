@@ -73,8 +73,7 @@ class BalanceUpdateTransactionTest extends ApiIntegrationTest {
         int basic = insertTimeDeposit("basic", "1200.00", 31);
         int premium = insertTimeDeposit("premium", "1200.00", 46);
         // Another writer commits a change to one Time Deposit after this Balance Update loaded it. Its Balance stays
-        // the
-        // same, so only the version tells the change apart.
+        // the same, so only the version tells the change apart.
         afterCalculation = timeDeposits -> jdbc.sql("UPDATE time_deposits SET version = version + 1 WHERE id = ?")
                 .param(premium)
                 .update();

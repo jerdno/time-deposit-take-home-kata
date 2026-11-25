@@ -93,6 +93,23 @@ class BalanceUpdateTest extends ApiIntegrationTest {
     }
 
     @Test
+    void doesNotWriteATimeDepositThatEarnsNoInterest() {
+        int id = insertTimeDeposit("basic", "1200.00", 30);
+        Map<String, Object> before = versionAndUpdatedAtOf(id);
+
+        assertThat(postBalanceUpdate()).hasStatus(HttpStatus.NO_CONTENT);
+
+        assertThat(versionAndUpdatedAtOf(id)).isEqualTo(before);
+    }
+
+    private Map<String, Object> versionAndUpdatedAtOf(int id) {
+        return jdbc.sql("SELECT version, updated_at FROM time_deposits WHERE id = ?")
+                .param(id)
+                .query()
+                .singleRow();
+    }
+
+    @Test
     void timeDepositWithAnUnknownPlanTypeKeepsItsBalanceAndIsLoggedAsAnError() {
         int gold = insertTimeDeposit("gold", "1000.00", 100);
         int basic = insertTimeDeposit("basic", "1200.00", 100);

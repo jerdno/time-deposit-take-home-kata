@@ -46,21 +46,23 @@ class BalanceUpdateService implements ApplyBalanceUpdateUseCase {
         List<VersionedTimeDeposit> timeDeposits = loadAllTimeDepositsPort.loadAllTimeDeposits();
         timeDepositCalculator.updateBalance(
                 timeDeposits.stream().map(VersionedTimeDeposit::timeDeposit).toList());
-        save(timeDeposits);
+        // A Time Deposit the calculator left unchanged (no interest: outside its Eligibility Window, or an unknown Plan
+        // Type) is not saved, so it is not written at all.
+        save(timeDeposits.stream().filter(VersionedTimeDeposit::balanceChanged).toList());
+        // Assumption (ticket 7): N counts every Time Deposit the Balance Update went through, including those that
+        // earned no interest (outside their Eligibility Window, or with an unknown Plan Type).
+        log.info("Balance Update finished, {} Time Deposits updated", timeDeposits.size());
     }
 
-    // One short transaction for all the writes: every Balance is saved, or none is.
-    private void save(List<VersionedTimeDeposit> timeDeposits) {
+    // One short transaction for all the writes: every changed Balance is saved, or none is.
+    private void save(List<VersionedTimeDeposit> changed) {
         try {
-            transactionTemplate.executeWithoutResult(status -> saveBalancesPort.saveBalances(timeDeposits));
+            transactionTemplate.executeWithoutResult(status -> saveBalancesPort.saveBalances(changed));
         } catch (OptimisticLockingFailureException e) {
             // Assumption (ticket 7): no row locks. Optimistic locking makes concurrent calls deterministic: each 204
             // means exactly one month of interest was applied, and the loser rolls back as a whole
             // (docs/adr/0001-optimistic-locking-for-the-balance-update.md).
             throw new ConcurrentBalanceUpdateException(e);
         }
-        // Assumption (ticket 7): N counts every Time Deposit the Balance Update went through, including those that
-        // earned no interest (outside their Eligibility Window, or with an unknown Plan Type).
-        log.info("Balance Update finished, {} Time Deposits updated", timeDeposits.size());
     }
 }
