@@ -21,15 +21,10 @@ class TimeDepositsController implements TimeDepositsApi {
 
     private final GetTimeDepositsUseCase getTimeDeposits;
     private final ApplyBalanceUpdateUseCase applyBalanceUpdate;
-    private final IdempotentRequests idempotentRequests;
 
-    TimeDepositsController(
-            GetTimeDepositsUseCase getTimeDeposits,
-            ApplyBalanceUpdateUseCase applyBalanceUpdate,
-            IdempotentRequests idempotentRequests) {
+    TimeDepositsController(GetTimeDepositsUseCase getTimeDeposits, ApplyBalanceUpdateUseCase applyBalanceUpdate) {
         this.getTimeDeposits = getTimeDeposits;
         this.applyBalanceUpdate = applyBalanceUpdate;
-        this.idempotentRequests = idempotentRequests;
     }
 
     @Override
@@ -45,8 +40,20 @@ class TimeDepositsController implements TimeDepositsApi {
 
     @Override
     public ResponseEntity<Void> applyBalanceUpdate(@Nullable String idempotencyKey) {
-        idempotentRequests.run(idempotencyKey, applyBalanceUpdate::applyBalanceUpdate);
+        if (idempotencyKey == null) {
+            applyBalanceUpdate.applyBalanceUpdate();
+        } else {
+            applyBalanceUpdate.applyBalanceUpdate(unquote(idempotencyKey));
+        }
         return ResponseEntity.noContent().build();
+    }
+
+    // The header is either a bare key or, as the IETF Idempotency-Key draft writes it, the key in double quotes; the
+    // contract's pattern has already checked which.
+    private static String unquote(String idempotencyKey) {
+        return idempotencyKey.startsWith("\"")
+                ? idempotencyKey.substring(1, idempotencyKey.length() - 1)
+                : idempotencyKey;
     }
 
     private static TimeDepositDto toDto(TimeDepositView timeDeposit) {
