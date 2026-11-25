@@ -22,6 +22,7 @@
         <openapi-generator-maven-plugin.version>7.27.0</openapi-generator-maven-plugin.version>
         <springdoc-openapi.version>3.2.1</springdoc-openapi.version>
         <archunit.version>1.5.1</archunit.version>
+        <build-helper-maven-plugin.version>3.8.0</build-helper-maven-plugin.version>
     </properties>
 
     <dependencies>
@@ -98,6 +99,39 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
             <plugin>
+                <!-- The domain lives in its own source roots, src/main/domain and src/test/domain, apart from the
+                     application layer and the adapters in src/main/java. Packages are unchanged. -->
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>${build-helper-maven-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>add-domain-source</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>add-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>src/main/domain</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>add-domain-test-source</id>
+                        <phase>generate-test-sources</phase>
+                        <goals>
+                            <goal>add-test-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>src/test/domain</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
                 <!-- Also publishes the contract as a static resource at /openapi.yaml, for Swagger UI to show as written
                      (see springdoc in application.yaml). -->
                 <artifactId>maven-resources-plugin</artifactId>
@@ -167,6 +201,14 @@
                 <version>${spotless-maven-plugin.version}</version>
                 <configuration>
                     <java>
+                        <!-- Spotless only checks src/main/java and src/test/java by default, so the domain roots are
+                             listed too. -->
+                        <includes>
+                            <include>src/main/java/**/*.java</include>
+                            <include>src/test/java/**/*.java</include>
+                            <include>src/main/domain/**/*.java</include>
+                            <include>src/test/domain/**/*.java</include>
+                        </includes>
                         <palantirJavaFormat>
                             <version>${palantir-java-format.version}</version>
                         </palantirJavaFormat>
