@@ -22,7 +22,17 @@ springdoc:
 server:
   mime-mappings:
     yaml: application/yaml
-logging:
-  pattern:
-    # Every log line carries the request id that AccessLogFilter puts in the MDC (empty brackets outside a request).
-    correlation: "[%X{requestId:-}] "
+management:
+  # Tracing is used only to correlate log lines; nothing is sent to an OpenTelemetry collector.
+  otlp:
+    metrics:
+      export:
+        enabled: false
+  tracing:
+    export:
+      otlp:
+        enabled: false
+  logging:
+    export:
+      otlp:
+        enabled: false
