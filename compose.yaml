@@ -15,11 +15,7 @@ services:
       interval: 2s
       timeout: 5s
       retries: 30
-    # Assumption (ticket 9): no host port. The walkthrough only needs the API, and a published 5432 would clash with a
-    # PostgreSQL already running on the host. Use `docker compose exec postgres psql -U time_deposits` to reach it.
     volumes:
-      # Assumption (ticket 9): a named volume, so Balance Updates survive `docker compose down` and `up`.
-      # `docker compose down -v` resets the database to the seed data.
       # PostgreSQL 18 images keep their data under /var/lib/postgresql/18/docker, so the volume mounts the parent.
       - postgres-data:/var/lib/postgresql
 

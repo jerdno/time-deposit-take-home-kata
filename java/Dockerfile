@@ -8,8 +8,6 @@ COPY mvnw pom.xml ./
 COPY .mvn .mvn
 COPY src src
 
-# Assumption (ticket 9): the tests are skipped here. They need a Docker daemon of their own (Testcontainers) and run
-# with ./mvnw verify, locally and in CI.
 # The cache mount keeps the downloaded dependencies between builds.
 RUN --mount=type=cache,target=/root/.m2 ./mvnw -B -DskipTests package \
     && cp target/time-deposit-kata-*.jar app.jar
