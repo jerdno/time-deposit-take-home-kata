@@ -1,5 +1,8 @@
 package org.ikigaidigital.support;
 
+import java.math.BigDecimal;
+import org.ikigaidigital.adapter.web.api.model.TimeDepositDto;
+import org.ikigaidigital.adapter.web.api.model.TimeDepositPageDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureRestTestClient;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -21,4 +24,23 @@ public abstract class ApiIntegrationTest extends DatabaseIntegrationTest {
 
     @Autowired
     protected RestTestClient client;
+
+    /** The Balance of the Time Deposit, as {@code GET /v1/time-deposits} returns it. */
+    protected BigDecimal balanceOf(int timeDepositId) {
+        return client
+                .get()
+                .uri("/v1/time-deposits?size=100")
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody(TimeDepositPageDto.class)
+                .returnResult()
+                .getResponseBody()
+                .getItems()
+                .stream()
+                .filter(timeDeposit -> timeDeposit.getId() == timeDepositId)
+                .map(TimeDepositDto::getBalance)
+                .findFirst()
+                .orElseThrow();
+    }
 }
