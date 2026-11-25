@@ -1,0 +1,22 @@
+# Optimistic locking for the Balance Update, with 409 for the loser
+
+Two overlapping calls to `POST /v1/time-deposits/balance-updates` must not silently overwrite each other's Balances. The Balance Update loads every Time Deposit and computes the interest without a transaction of its own, then saves all the new Balances in one short transaction with a check on each Time Deposit's `version`. When two overlap, the second to save finds a changed `version`, rolls back as a whole and returns `409 Conflict`. Each `204` therefore means exactly one month of interest was applied, and a `409` means that call applied nothing.
+
+## Considered Options
+
+- **No guard.** Two overlapping calls both read the old Balance and both write their result: a lost update. The month of interest is applied once while both callers get success.
+- **Row locks** (`SELECT ... FOR UPDATE` on every Time Deposit). The second call waits, then applies another month on top of the first. Both return `204` and two months are applied. That is correct if the caller meant two calls, but a retry or a duplicate trigger silently doubles the interest. The lock also holds every Time Deposit for the whole Balance Update, blocking any other writer.
+- **One transaction around load, calculation and save, with optimistic locking.** The loaded entities stay in the persistence context with their `@Version` until the save, which makes the check free. But the transaction, and the database connection under it, stay open while interest is computed for every Time Deposit.
+- **Optimistic locking with `409`, writes in one short transaction** (chosen). Nothing is held while interest is computed: no lock, no transaction, no connection. A concurrent duplicate fails fast and visibly instead of applying a second month, and the caller decides whether a second month was really meant. The cost is that the loser's work is thrown away, which is cheap here.
+  - The application opens no transaction around the load. `TimeDepositJpaRepository.findAll` runs in the short read-only transaction Spring Data's `SimpleJpaRepository` gives it, which ends when the query returns. Each Time Deposit leaves the persistence adapter with the `version` it was read at, in a `VersionedTimeDeposit`; the domain `TimeDeposit` has no version and does not change.
+  - `TimeDepositCalculator.updateBalance` runs on the plain `TimeDeposit`s with no transaction open, so the load and the save are separate transactions.
+  - The save is the only transaction the application opens. It finds the changed Time Deposits again and changes only their Balance. `TimeDepositEntity.changeBalance` takes the `ExpectedVersion` (the loaded one) and throws an `ObjectOptimisticLockingFailureException` if the entity is at another version, before changing anything. JPA `@Version` then adds `WHERE version = ?` to each UPDATE, which catches a change that commits between the find and the flush. No hand-written SQL.
+  - The check cannot be skipped: every method that changes a `VersionedEntity` takes an `ExpectedVersion` and calls `requireVersion` first, and an ArchUnit rule (`VersionedEntitiesTest`) fails the build otherwise.
+- **Optimistic locking with `saveAll` of detached entities.** The adapter would rebuild each entity from the domain with its loaded `version`, and JPA merge would do both checks itself. Rejected: merge copies every column of the rebuilt entity onto the row, so any column the domain does not carry (today `updated_at`, tomorrow any new one) is overwritten, typically with `null`. Changing only the owned fields of an entity found again leaves those columns alone.
+
+## Consequences
+
+- UPDATEs go out in primary-key order (`hibernate.order_updates`), so two Balance Updates lock rows in the same order and cannot deadlock. The later one waits for the first to commit, then fails its version check.
+- A Time Deposit whose Balance the calculator does not change (outside its Eligibility Window, or with an unknown Plan Type) is not saved at all, so its `version` is not checked either: a change to it by someone else between the load and the save is no conflict, because this Balance Update writes nothing to it.
+- The save finds every changed Time Deposit a second time, one extra query per Balance Update, in exchange for holding nothing while interest is computed.
+- Retries of a call that may or may not have run are a separate concern (an idempotency key, ticket 11). Optimistic locking only protects calls that overlap in time.

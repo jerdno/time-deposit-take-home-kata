@@ -1,12 +1,19 @@
 package org.ikigaidigital.adapter.persistence;
 
+import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 import java.util.Map;
+import org.ikigaidigital.TimeDeposit;
+import org.ikigaidigital.adapter.persistence.entity.ExpectedVersion;
 import org.ikigaidigital.adapter.persistence.entity.TimeDepositEntity;
+import org.ikigaidigital.adapter.persistence.entity.VersionedEntity;
 import org.ikigaidigital.adapter.persistence.entity.WithdrawalEntity;
 import org.ikigaidigital.adapter.persistence.repository.TimeDepositJpaRepository;
 import org.ikigaidigital.adapter.persistence.repository.TimeDepositJpaRepository.TimeDepositWithTotal;
@@ -14,14 +21,20 @@ import org.ikigaidigital.adapter.persistence.repository.WithdrawalJpaRepository;
 import org.ikigaidigital.application.model.PageQuery;
 import org.ikigaidigital.application.model.TimeDepositPage;
 import org.ikigaidigital.application.model.TimeDepositView;
+import org.ikigaidigital.application.model.VersionedTimeDeposit;
 import org.ikigaidigital.application.model.WithdrawalView;
+import org.ikigaidigital.application.port.out.LoadAllTimeDepositsPort;
 import org.ikigaidigital.application.port.out.LoadTimeDepositPagePort;
+import org.ikigaidigital.application.port.out.SaveBalancesPort;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 @Component
-class TimeDepositPersistenceAdapter implements LoadTimeDepositPagePort {
+class TimeDepositPersistenceAdapter implements LoadTimeDepositPagePort, LoadAllTimeDepositsPort, SaveBalancesPort {
 
     // The order the contract promises for a page of Time Deposits.
     private static final Sort BY_ID = Sort.by("id");
@@ -69,10 +82,63 @@ class TimeDepositPersistenceAdapter implements LoadTimeDepositPagePort {
                 items, query.page(), query.size(), rows.getFirst().totalItems());
     }
 
-    // Assumption (ticket 5): a page past the last one is an empty page (200), not an error. The page query returned no
-    // row to carry the total, so it is counted separately.
+    // The page query returned no row to carry the total, so it is counted separately.
     private TimeDepositPage emptyPage(PageQuery query) {
         return new TimeDepositPage(List.of(), query.page(), query.size(), timeDeposits.count());
+    }
+
+    /**
+     * Each Time Deposit carries the {@code version} it was read at; {@link #saveBalances} checks it. The load needs no
+     * transaction of the caller's: {@code findAll} runs in Spring Data's own short read-only one, and the entities are
+     * detached once it ends.
+     */
+    @Override
+    public List<VersionedTimeDeposit> loadAllTimeDeposits() {
+        return timeDeposits.findAll(Sort.by("id")).stream()
+                .map(timeDeposit -> new VersionedTimeDeposit(toDomain(timeDeposit), timeDeposit.getVersion()))
+                .toList();
+    }
+
+    /**
+     * Finds the Time Deposits again in the caller's transaction and changes only their Balance, so columns the domain
+     * does not carry keep their stored values. {@link TimeDepositEntity#changeBalance} first checks that each one is
+     * still at the {@code version} it was loaded at, and JPA {@code @Version} adds {@code WHERE version = ?} to each
+     * UPDATE, which catches a change that commits after the find ({@link VersionedEntity}).
+     */
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void saveBalances(List<VersionedTimeDeposit> updatedTimeDeposits) {
+        Map<Integer, TimeDepositEntity> entitiesById = timeDeposits
+                .findAllById(updatedTimeDeposits.stream()
+                        .map(updated -> updated.timeDeposit().getId())
+                        .toList())
+                .stream()
+                .collect(toMap(TimeDepositEntity::getId, identity()));
+        for (VersionedTimeDeposit updated : updatedTimeDeposits) {
+            TimeDeposit timeDeposit = updated.timeDeposit();
+            TimeDepositEntity entity = entitiesById.get(timeDeposit.getId());
+            if (entity == null) {
+                // Deleted since the load.
+                throw new ObjectOptimisticLockingFailureException(TimeDepositEntity.class, timeDeposit.getId());
+            }
+            entity.changeBalance(roundToCent(timeDeposit.getBalance()), new ExpectedVersion(updated.version()));
+        }
+        timeDeposits.flush();
+    }
+
+    // The domain keeps the Balance in a Double; rounding to the cent, half-up, removes its floating-point noise
+    // (e.g. 1000.10 + 0.83 is 1000.9300000000001 as a double and is saved as 1000.93). BigDecimal.valueOf takes the
+    // shortest decimal form of the double.
+    private static BigDecimal roundToCent(Double balance) {
+        return BigDecimal.valueOf(balance).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private static TimeDeposit toDomain(TimeDepositEntity timeDeposit) {
+        return new TimeDeposit(
+                timeDeposit.getId(),
+                timeDeposit.getPlanType(),
+                timeDeposit.getBalance().doubleValue(),
+                timeDeposit.getDays());
     }
 
     private static TimeDepositView toView(TimeDepositEntity timeDeposit, List<WithdrawalView> withdrawals) {
