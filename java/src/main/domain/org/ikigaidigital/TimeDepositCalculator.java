@@ -3,8 +3,11 @@ package org.ikigaidigital;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
+import org.ikigaidigital.plantype.BasicPlan;
 import org.ikigaidigital.plantype.PlanType;
 import org.ikigaidigital.plantype.PlanTypeResolver;
+import org.ikigaidigital.plantype.PremiumPlan;
+import org.ikigaidigital.plantype.StudentPlan;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,6 +17,15 @@ public class TimeDepositCalculator {
 
     private final PlanTypeResolver planTypeResolver;
 
+    /**
+     * The constructor the original calculator had, kept so that existing callers compile unchanged. It knows every
+     * Plan Type that exists today; a new Plan Type is one more entry in this list.
+     */
+    public TimeDepositCalculator() {
+        this(new PlanTypeResolver(List.of(new BasicPlan(), new StudentPlan(), new PremiumPlan())));
+    }
+
+    /** A calculator for another set of Plan Types. */
     public TimeDepositCalculator(PlanTypeResolver planTypeResolver) {
         this.planTypeResolver = planTypeResolver;
     }

@@ -12,10 +12,6 @@ import org.ikigaidigital.TimeDeposit;
 import org.ikigaidigital.TimeDepositCalculator;
 import org.ikigaidigital.application.port.in.ApplyBalanceUpdateUseCase;
 import org.ikigaidigital.application.port.in.exception.ConcurrentBalanceUpdateException;
-import org.ikigaidigital.plantype.BasicPlan;
-import org.ikigaidigital.plantype.PlanTypeResolver;
-import org.ikigaidigital.plantype.PremiumPlan;
-import org.ikigaidigital.plantype.StudentPlan;
 import org.ikigaidigital.support.DatabaseIntegrationTest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -36,8 +32,7 @@ class BalanceUpdateServiceTest extends DatabaseIntegrationTest {
     ApplyBalanceUpdateUseCase balanceUpdate;
 
     static TimeDepositCalculator timeDepositCalculator() {
-        return new TimeDepositCalculator(
-                new PlanTypeResolver(List.of(new BasicPlan(), new StudentPlan(), new PremiumPlan()))) {
+        return new TimeDepositCalculator() {
             @Override
             public void updateBalance(List<TimeDeposit> timeDeposits) {
                 super.updateBalance(timeDeposits);

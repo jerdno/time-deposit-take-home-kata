@@ -3,7 +3,6 @@ package org.ikigaidigital;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
-import org.ikigaidigital.plantype.PlanTypeResolver;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
@@ -16,12 +15,8 @@ import org.junit.jupiter.api.Test;
  */
 class TimeDepositCalculatorTest {
 
-    // The only place the calculator is constructed; tests reach it through this field.
-    private final TimeDepositCalculator calculator = new TimeDepositCalculator(new PlanTypeResolver(List.of(
-            // Fully qualified: the @Nested classes below share these names.
-            new org.ikigaidigital.plantype.BasicPlan(),
-            new org.ikigaidigital.plantype.StudentPlan(),
-            new org.ikigaidigital.plantype.PremiumPlan())));
+    // Constructed as the original code constructed it, with no arguments: existing callers must keep working.
+    private final TimeDepositCalculator calculator = new TimeDepositCalculator();
 
     private double balanceAfterUpdate(String planType, double balance, int days) {
         TimeDeposit timeDeposit = new TimeDeposit(1, planType, balance, days);

@@ -4,7 +4,8 @@ import org.ikigaidigital.TimeDeposit;
 
 /**
  * The Plan Type a Time Deposit belongs to. It owns its own interest terms: rate and Eligibility Window. Adding a
- * Plan Type means adding an implementation of this interface and registering it with {@link PlanTypeResolver}.
+ * Plan Type means adding an implementation of this interface and listing it in {@code TimeDepositCalculator}'s no-arg
+ * constructor, which builds the {@link PlanTypeResolver}.
  */
 public interface PlanType {
 
